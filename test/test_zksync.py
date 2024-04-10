@@ -1,17 +1,15 @@
+import socket
 import sys
 from subprocess import Popen, TimeoutExpired
 from time import sleep
 
+import boa
 import pytest
 import requests
 from eth_account import Account
-
-import boa
-from boa_zksync.env import ZksyncEnv
-import socket
-
 from requests.exceptions import ConnectionError
 
+from boa_zksync.env import ZksyncEnv
 from boa_zksync.interpret import loads_zksync
 from boa_zksync.rpc import ZksyncRPC
 

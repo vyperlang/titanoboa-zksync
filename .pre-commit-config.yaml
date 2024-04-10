@@ -36,7 +36,7 @@ repos:
           - --ignore-missing-imports
           - --implicit-optional
           - --package
-          - boa
+          - boa_zksync
 
 default_language_version:
   python: python3.10
