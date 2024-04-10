@@ -9,7 +9,7 @@ classifiers = ["Topic :: Software Development"]
 
 # Requirements
 dependencies = [
-    "titanoboa@git+https://github.com/vyperlang/titanoboa@master",
+    "titanoboa@git+https://github.com/DanielSchiavini/titanoboa@zksync",
 ]
 
 [project.optional-dependencies]
@@ -20,3 +20,6 @@ requires = ["setuptools", "wheel"]
 
 [tool.setuptools.packages.find]
 include = ["boa_zksync*"]
+
+[tool.setuptools.package-data]
+boa_zksync = ['*.json']
