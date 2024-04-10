@@ -27,6 +27,12 @@ jobs:
         run: |
           pip install -r dev-requirements.txt
           pip install .
+          
+          # Install zkvyper and era_test_node from binary repositories
+          curl https://github.com/matter-labs/zkvyper-bin/raw/66cc159d9b6/linux-amd64/zkvyper-linux-amd64-musl-v1.4.0 \
+            -o ~/.local/bin/zkvyper && chmod +x ~/.local/bin/zkvyper
+          curl https://github.com/matter-labs/era-test-node/releases/download/v0.1.0-alpha.19/era_test_node-v0.1.0-alpha.19-x86_64-unknown-linux-gnu.tar.gz \
+            -o era_test_node.tar.gz && tar -xvf era_test_node.tar.gz && mv era_test_node ~/.local/bin/era_test_node
 
       - name: Run Unit Tests
         env:
