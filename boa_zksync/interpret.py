@@ -6,7 +6,7 @@ from boa.contracts.abi.abi_contract import ABIContract
 from boa_zksync.contract import ZksyncDeployer, compile_zksync
 
 
-def load_zksync(filename: str, *args, compiler_args, **kwargs) -> ABIContract:
+def load_zksync(filename: str, *args, compiler_args=None, **kwargs) -> ABIContract:
     deployer = load_zksync_partial(filename, filename, compiler_args)
     return deployer.deploy(*args, **kwargs)
 

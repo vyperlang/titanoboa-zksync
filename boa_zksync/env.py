@@ -2,15 +2,17 @@ from hashlib import sha256
 from pathlib import Path
 
 import rlp
-from eth_account import Account
-from eth_account.messages import encode_typed_data
-
 from boa.contracts.abi.abi_contract import ABIContractFactory
 from boa.interpret import json
 from boa.network import NetworkEnv
 from boa.util.abi import Address
+from eth_account import Account
+from eth_account.messages import encode_typed_data
+
 from boa_zksync.rpc import ZksyncRPC
 
+
+ZERO_ADDRESS = "0x0000000000000000000000000000000000000000"
 CONTRACT_DEPLOYER_ADDRESS = "0x0000000000000000000000000000000000008006"
 with open(Path(__file__).parent / "IContractDeployer.json") as f:
     CONTRACT_DEPLOYER = ABIContractFactory.from_abi_dict(json.load(f), "ContractDeployer", )
@@ -19,9 +21,10 @@ with open(Path(__file__).parent / "IContractDeployer.json") as f:
 _EIP712_TYPE = bytes.fromhex("71")
 _EIP712_DOMAIN_ABI_TYPE = "EIP712Domain(string name,string version,uint256 chainId)"
 _EIP712_TRANSACTION_ABI_TYPE = (
-    "Transaction(uint256 txType,uint256 from,uint256 to,uint256 gasLimit,uint256 gasPerPubdataByteLimit,"
-    "uint256 maxFeePerGas,uint256 maxPriorityFeePerGas,uint256 paymaster,uint256 nonce,uint256 value,"
-    "bytes data,bytes32[] factoryDeps,bytes paymasterInput)"
+    "Transaction(uint256 txType,uint256 from,uint256 to,uint256 gasLimit,uint256 "
+    "gasPerPubdataByteLimit,uint256 maxFeePerGas,uint256 maxPriorityFeePerGas,"
+    "uint256 paymaster,uint256 nonce,uint256 value,bytes data,bytes32[] factoryDeps,"
+    "bytes paymasterInput)"
 )
 _EIP712_TRANSACTION_TYPE_SPEC = {
     "Transaction": [
@@ -36,17 +39,19 @@ _EIP712_TRANSACTION_TYPE_SPEC = {
         { "name": "nonce", "type": "uint256" },
         { "name": "value", "type": "uint256" },
         { "name": "data", "type": "bytes" },
-        { "name": "factoryDeps", "type": "bytes32[]" },
+        { "name": "factoryDeps", "type": "bytes[]" },
         { "name": "paymasterInput", "type": "bytes" }
     ]
 }
+_GAS_PER_PUB_DATA_DEFAULT = 50000
+
 
 class ZksyncEnv(NetworkEnv):
     def __init__(self, rpc: ZksyncRPC, accounts: dict[str, Account] = None):
         super().__init__(rpc, accounts)
         self._contract_deployer = CONTRACT_DEPLOYER.at(CONTRACT_DEPLOYER_ADDRESS)
 
-    def deploy_code(self, sender=None, gas=None, value=0, bytecode=b"", constructor_calldata=b"", salt=b"0" * 32, **kwargs):
+    def deploy_code(self, sender=None, gas=None, value=0, bytecode=b"", constructor_calldata=b"", salt=b"\0" * 32, **kwargs):
         bytecode_hash = _hash_code(bytecode)
         calldata = self._contract_deployer.create.prepare_calldata(salt, bytecode_hash, constructor_calldata)
 
@@ -58,6 +63,7 @@ class ZksyncEnv(NetworkEnv):
             ("eth_getTransactionCount", [sender, "latest"]),
             ("eth_chainId", [])
         ])
+        chain_id = int(chain_id, 16)
 
         tx_data = {
             "txType": "0x" + _EIP712_TYPE.hex(),
@@ -71,9 +77,9 @@ class ZksyncEnv(NetworkEnv):
             "nonce": nonce,
             "value": "0x" + value.to_bytes(32, 'big').hex(),
             "data": "0x" + calldata.hex(),
-            "factoryDeps": ["0x" + bytecode_hash.hex()],
+            "factoryDeps": [bytecode_hash],
             "paymaster": 0,
-            "paymasterInput": "0x",
+            "paymasterInput": b"",
         }
 
         raw_tx = _sign_message(chain_id, account, tx_data)
@@ -82,7 +88,7 @@ class ZksyncEnv(NetworkEnv):
         return receipt["contractAddress"]
 
 
-def _sign_message(chain_id: str, account: Account, tx_data: dict) -> bytes:
+def _sign_message(chain_id: int, account: Account, tx_data: dict) -> bytes:
     # https://github.com/foundry-rs/foundry/issues/4648
     return _EIP712_TYPE + rlp.encode([
         tx_data["nonce"],
@@ -98,9 +104,9 @@ def _sign_message(chain_id: str, account: Account, tx_data: dict) -> bytes:
         chain_id,
         tx_data["from"],
         tx_data["gasPerPubdataByteLimit"],
-        tx_data["factoryDeps"],
+        ["0x" + _hash_code(b).hex() for b in tx_data["factoryDeps"]],
         _sign_typed_data(account, chain_id, tx_data),
-        [tx_data["paymaster"], tx_data["paymasterInput"]]
+        [tx_data["paymaster"], tx_data["paymasterInput"]] if tx_data["paymaster"] else [],
     ])
 
 

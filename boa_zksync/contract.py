@@ -73,7 +73,7 @@ def compile_zksync(file_name: str, compiler_args = None) -> ZksyncCompilerData:
         # request JSON output
         "-f", "combined_json",
         # pass any extra compiler args
-        *compiler_args,
+        *(compiler_args or []),
         # pass the file name
         "--", file_name,
     ))
