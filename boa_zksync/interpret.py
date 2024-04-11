@@ -3,7 +3,8 @@ import textwrap
 from tempfile import TemporaryDirectory
 
 from boa.contracts.abi.abi_contract import ABIContract
-from boa_zksync.contract import ZksyncDeployer, compile_zksync
+from boa_zksync.compile import compile_zksync
+from boa_zksync.deployer import ZksyncDeployer
 
 
 def load_zksync(filename: str, *args, compiler_args=None, **kwargs) -> ABIContract:
