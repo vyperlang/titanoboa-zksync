@@ -10,16 +10,16 @@ mypy:
 		--follow-imports=silent \
 		--ignore-missing-imports \
 		--implicit-optional \
-		-p vyper
+		-p boa_zksync
 
 black:
-	black -C -t py311 vyper/ tests/ setup.py --force-exclude=vyper/version.py
+	black -C -t py311 boa_zksync/ tests/
 
 flake8: black
-	flake8 vyper/ tests/
+	flake8 boa_zksync/ tests/
 
 isort: black
-	isort vyper/ tests/ setup.py
+	isort boa_zksync/ tests/ setup.py
 
 build:
 	pip install .

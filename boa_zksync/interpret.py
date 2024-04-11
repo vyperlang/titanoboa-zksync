@@ -3,6 +3,7 @@ import textwrap
 from tempfile import TemporaryDirectory
 
 from boa.contracts.abi.abi_contract import ABIContract
+
 from boa_zksync.compile import compile_zksync
 from boa_zksync.deployer import ZksyncDeployer
 
@@ -12,22 +13,13 @@ def load_zksync(filename: str, *args, compiler_args=None, **kwargs) -> ABIContra
     return deployer.deploy(*args, **kwargs)
 
 
-def loads_zksync(
-        source_code,
-        *args,
-        name=None,
-        compiler_args=None,
-        **kwargs,
-):
+def loads_zksync(source_code, *args, name=None, compiler_args=None, **kwargs):
     d = loads_zksync_partial(source_code, name, compiler_args=compiler_args)
     return d.deploy(*args, **kwargs)
 
 
 def loads_zksync_partial(
-        source_code: str,
-        name: str = None,
-        dedent: bool = True,
-        compiler_args: dict = None,
+    source_code: str, name: str = None, dedent: bool = True, compiler_args: dict = None
 ) -> ZksyncDeployer:
     name = name or "VyperContract"  # TODO handle this upstream in CompilerData
     if dedent:

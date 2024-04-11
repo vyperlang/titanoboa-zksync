@@ -1,7 +1,7 @@
 from functools import cached_property
 
 from boa import Env
-from boa.contracts.abi.abi_contract import ABIContractFactory, ABIFunction, ABIContract
+from boa.contracts.abi.abi_contract import ABIContract, ABIContractFactory, ABIFunction
 from boa.util.abi import Address
 
 from boa_zksync.compile import ZksyncCompilerData
@@ -13,7 +13,8 @@ class ZksyncDeployer(ABIContractFactory):
             name,
             compiler_data.abi,
             functions=[
-                ABIFunction(item, name) for item in compiler_data.abi
+                ABIFunction(item, name)
+                for item in compiler_data.abi
                 if item.get("type") == "function"
             ],
             filename=filename,
@@ -24,9 +25,15 @@ class ZksyncDeployer(ABIContractFactory):
         env = Env.get_singleton()
 
         initcode = bytes.fromhex(self.compiler_data.bytecode.removeprefix("0x"))
-        constructor_calldata = self.constructor.prepare_calldata(*args, **kwargs) if args or kwargs else b""
+        constructor_calldata = (
+            self.constructor.prepare_calldata(*args, **kwargs)
+            if args or kwargs
+            else b""
+        )
 
-        address, _ = env.deploy_code(bytecode=initcode, value=value, constructor_calldata=constructor_calldata)
+        address, _ = env.deploy_code(
+            bytecode=initcode, value=value, constructor_calldata=constructor_calldata
+        )
         return ABIContract(
             self._name,
             self.abi,

@@ -5,7 +5,7 @@ class ZksyncRPC(EthereumRPC):
 
     _disabled_methods = {
         # zkSync Era does nothing with the max fee parameters.
-        "maxPriorityFeePerGas": 0,
+        "maxPriorityFeePerGas": 0
     }
 
     def fetch_uncached(self, method, params):

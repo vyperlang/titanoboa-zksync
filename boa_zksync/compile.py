@@ -3,22 +3,35 @@ import subprocess
 from collections import namedtuple
 from shutil import which
 
-ZksyncCompilerData = namedtuple("ZksyncCompilerData", [
-    'method_identifiers', 'abi', 'bytecode', 'bytecode_runtime', 'warnings', 'factory_deps',
-])
+ZksyncCompilerData = namedtuple(
+    "ZksyncCompilerData",
+    [
+        "method_identifiers",
+        "abi",
+        "bytecode",
+        "bytecode_runtime",
+        "warnings",
+        "factory_deps",
+    ],
+)
 
 
-def compile_zksync(file_name: str, compiler_args = None) -> ZksyncCompilerData:
-    output = json.loads(_call_zkvyper(
-        # make sure zkvyper uses the same vyper as boa
-        "--vyper", which("vyper"),
-        # request JSON output
-        "-f", "combined_json",
-        # pass any extra compiler args
-        *(compiler_args or []),
-        # pass the file name
-        "--", file_name,
-    ))
+def compile_zksync(file_name: str, compiler_args=None) -> ZksyncCompilerData:
+    output = json.loads(
+        _call_zkvyper(
+            # make sure zkvyper uses the same vyper as boa
+            "--vyper",
+            which("vyper"),
+            # request JSON output
+            "-f",
+            "combined_json",
+            # pass any extra compiler args
+            *(compiler_args or []),
+            # pass the file name
+            "--",
+            file_name,
+        )
+    )
     return ZksyncCompilerData(**output[file_name])
 
 

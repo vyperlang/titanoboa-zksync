@@ -9,21 +9,23 @@ from boa.util.abi import Address, abi_encode
 from eth_account import Account
 from eth_account.datastructures import SignedMessage
 from eth_account.messages import encode_defunct
-from rlp.sedes import Binary, BigEndianInt, List
+from rlp.sedes import BigEndianInt, Binary, List
 from vyper.utils import keccak256
 
 from boa_zksync.rpc import ZksyncRPC
 
 CONTRACT_DEPLOYER_ADDRESS = "0x0000000000000000000000000000000000008006"
 with open(Path(__file__).parent / "IContractDeployer.json") as f:
-    CONTRACT_DEPLOYER = ABIContractFactory.from_abi_dict(json.load(f), "ContractDeployer", )
+    CONTRACT_DEPLOYER = ABIContractFactory.from_abi_dict(
+        json.load(f), "ContractDeployer"
+    )
 
 _EIP712_TYPE = bytes.fromhex("71")
 _EIP712_DOMAIN_ABI_TYPE = "EIP712Domain(string name,string version,uint256 chainId)"
 _EIP712_DOMAIN_ABI_TYPE_SPEC = [
     {"name": "name", "type": "string"},
     {"name": "version", "type": "string"},
-    {"name": "chainId", "type": "uint256"}
+    {"name": "chainId", "type": "uint256"},
 ]
 _EIP712_TRANSACTION_ABI_TYPE = (
     "Transaction(uint256 txType,uint256 from,uint256 to,uint256 gasLimit,uint256 "
@@ -44,7 +46,7 @@ _EIP712_TRANSACTION_SPEC = [
     {"name": "value", "type": "uint256"},
     {"name": "data", "type": "bytes"},
     {"name": "factoryDeps", "type": "bytes32[]"},
-    {"name": "paymasterInput", "type": "bytes"}
+    {"name": "paymasterInput", "type": "bytes"},
 ]
 _EIP712_TYPES_SPEC = {"Transaction": _EIP712_TRANSACTION_SPEC}
 _GAS_PER_PUB_DATA_DEFAULT = 50000
@@ -55,20 +57,32 @@ class ZksyncEnv(NetworkEnv):
         super().__init__(rpc, accounts)
         self.contract_deployer = CONTRACT_DEPLOYER.at(CONTRACT_DEPLOYER_ADDRESS)
 
-    def deploy_code(self, sender=None, gas=None, value=0, bytecode=b"", constructor_calldata=b"", salt=b"\0" * 32,
-                    **kwargs):
+    def deploy_code(
+        self,
+        sender=None,
+        gas=None,
+        value=0,
+        bytecode=b"",
+        constructor_calldata=b"",
+        salt=b"\0" * 32,
+        **kwargs,
+    ):
         bytecode_hash = _hash_code(bytecode)
-        calldata = self.contract_deployer.create.prepare_calldata(salt, bytecode_hash, constructor_calldata)
+        calldata = self.contract_deployer.create.prepare_calldata(
+            salt, bytecode_hash, constructor_calldata
+        )
 
         sender = str(Address(sender or self.eoa))
         gas = gas or 0  # unknown at this state
         account = self._accounts[sender]
 
-        nonce, chain_id, gas_price = self._rpc.fetch_multi([
-            ("eth_getTransactionCount", [sender, "latest"]),
-            ("eth_chainId", []),
-            ("eth_gasPrice", [])
-        ])
+        nonce, chain_id, gas_price = self._rpc.fetch_multi(
+            [
+                ("eth_getTransactionCount", [sender, "latest"]),
+                ("eth_chainId", []),
+                ("eth_gasPrice", []),
+            ]
+        )
         chain_id = int(chain_id, 16)
         gas_price = int(gas_price, 16)
 
@@ -86,7 +100,7 @@ class ZksyncEnv(NetworkEnv):
             "eip712Meta": {
                 "gasPerPubdata": f"0x{_GAS_PER_PUB_DATA_DEFAULT:0x}",
                 "factoryDeps": [[int(b) for b in bytecode]],
-            }
+            },
         }
 
         estimated_gas = self._rpc.fetch("eth_estimateGas", [tx_data])
@@ -190,7 +204,7 @@ def _sign_typed_data(account, estimated_gas, tx_data) -> SignedMessage:
             ],
             "paymaster": 0,
             "paymasterInput": b"",
-        }
+        },
     }
     if hasattr(account, "sign_typed_data"):
         return account.sign_typed_data(full_message=typed_data)
@@ -200,8 +214,12 @@ def _sign_typed_data(account, estimated_gas, tx_data) -> SignedMessage:
     encoded_body = _encode_struct(_EIP712_TRANSACTION_SPEC, typed_data["message"])
     msg = [
         b"\x19\x01",
-        keccak256(keccak256(_EIP712_DOMAIN_ABI_TYPE.encode()) + b"".join(encoded_domain)),
-        keccak256(keccak256(_EIP712_TRANSACTION_ABI_TYPE.encode()) + b"".join(encoded_body))
+        keccak256(
+            keccak256(_EIP712_DOMAIN_ABI_TYPE.encode()) + b"".join(encoded_domain)
+        ),
+        keccak256(
+            keccak256(_EIP712_TRANSACTION_ABI_TYPE.encode()) + b"".join(encoded_body)
+        ),
     ]
     singable_message = encode_defunct(b"".join(msg))
     msg_hash = keccak256(singable_message.body)
@@ -229,7 +247,7 @@ def _hash_code(bytecode: bytes) -> bytes:
     bytecode_size = int(bytecode_len / 32)
     if bytecode_len % 32 != 0:
         raise RuntimeError("Bytecode length in 32-byte words must be odd")
-    if bytecode_size > 2 ** 16:
+    if bytecode_size > 2**16:
         raise OverflowError("hash_byte_code, bytecode length must be less than 2^16")
     bytecode_hash = sha256(bytecode).digest()
     encoded_len = bytecode_size.to_bytes(2, byteorder="big")

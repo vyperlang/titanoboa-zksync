@@ -1,6 +1,6 @@
-from IPython.core.magic import magics_class, line_cell_magic, cell_magic, line_magic, Magics
+from IPython.core.magic import Magics, cell_magic, line_cell_magic, line_magic, magics_class
 
-from boa_zksync.interpret import eval_zksync, loads_zksync_partial, loads_zksync
+from boa_zksync.interpret import eval_zksync, loads_zksync, loads_zksync_partial
 
 
 @magics_class

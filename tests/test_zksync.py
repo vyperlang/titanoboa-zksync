@@ -73,7 +73,9 @@ def stop_subprocess(proc: Popen[bytes]):
 
 @pytest.fixture(scope="module")
 def account():
-    return Account.from_key("0x3d3cbc973389cb26f657686445bcc75662b415b656078503592ac8c1abb8810e")
+    return Account.from_key(
+        "0x3d3cbc973389cb26f657686445bcc75662b415b656078503592ac8c1abb8810e"
+    )
 
 
 @pytest.fixture(scope="module", autouse=True)
