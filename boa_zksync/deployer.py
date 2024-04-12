@@ -5,6 +5,7 @@ from boa.contracts.abi.abi_contract import ABIContract, ABIContractFactory, ABIF
 from boa.util.abi import Address
 
 from boa_zksync.compile import ZksyncCompilerData
+from boa_zksync.env import _ZksyncEnvMixin
 
 
 class ZksyncDeployer(ABIContractFactory):
@@ -31,6 +32,7 @@ class ZksyncDeployer(ABIContractFactory):
             else b""
         )
 
+        assert isinstance(env, _ZksyncEnvMixin)
         address, _ = env.deploy_code(
             bytecode=initcode, value=value, constructor_calldata=constructor_calldata
         )
