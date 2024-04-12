@@ -34,7 +34,7 @@ coverage:
   --cov=boa_zksync \
   --cov-append \
   --cov-report term-missing:skip-covered \
-  --cov-fail-under=70 \
+  --cov-fail-under=80 \
   -nauto \
   tests
 
