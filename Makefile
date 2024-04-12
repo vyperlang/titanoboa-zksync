@@ -26,17 +26,15 @@ build:
 
 # run tests without forked tests (which require access to a node)
 test:
-	pytest tests/
+	pytest -nauto tests/
 
 coverage:
-  COV_CORE_SOURCE=boa_zksync COV_CORE_CONFIG=.coveragerc COV_CORE_DATAFILE=.coverage.eager \
-  pytest \
-  --cov=boa_zksync \
-  --cov-append \
-  --cov-report term-missing:skip-covered \
-  --cov-fail-under=80 \
-  -nauto \
-  tests
+	  pytest \
+		  --cov=boa_zksync \
+		  --cov-append \
+		  --cov-report term-missing:skip-covered \
+		  --cov-fail-under=80 \
+		  tests/
 
 clean:
 	@find . -name '*.pyc' -exec rm -f {} +

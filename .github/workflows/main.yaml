@@ -44,17 +44,7 @@ jobs:
       - name: Run Unit Tests
         env:
           PYTHONPATH: ${{ github.workspace }}
-          # pass internals to pytest-cov, since we are testing a pytest plugin.
-          # See https://github.com/pytest-dev/pytest-cov/blob/2c9f2170/docs/plugins.rst
-
-        run: >-
-          pytest
-          --cov=boa_zksync
-          --cov-append
-          --cov-report term-missing:skip-covered
-          --cov-fail-under=70
-          -nauto
-          tests
+        run: make test
 
       - name: Run Lint
         run: make lint

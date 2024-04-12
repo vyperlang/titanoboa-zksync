@@ -43,6 +43,3 @@ def load_zksync_partial(filename: str, name=None, compiler_args=None) -> ZksyncD
     if not compiler_data.abi:
         logging.warning("No ABI found in compiled contract")
     return ZksyncDeployer(compiler_data, name or filename, filename=filename)
-
-
-__all__ = []  # type: ignore

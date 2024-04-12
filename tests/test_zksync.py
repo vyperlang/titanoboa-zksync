@@ -6,12 +6,12 @@ from time import sleep
 import boa
 import pytest
 import requests
+from boa.rpc import EthereumRPC
 from eth_account import Account
 from requests.exceptions import ConnectionError
 
 from boa_zksync.env import ZksyncEnv
 from boa_zksync.interpret import loads_zksync
-from boa_zksync.rpc import ZksyncRPC
 
 code = """
 totalSupply: public(uint256)
@@ -78,9 +78,14 @@ def account():
     )
 
 
+@pytest.fixture(scope="module")
+def rpc(era_test_node):
+    return EthereumRPC(era_test_node)
+
+
 @pytest.fixture(scope="module", autouse=True)
-def zksync_env(era_test_node, account):
-    env = ZksyncEnv(ZksyncRPC(era_test_node))
+def zksync_env(rpc, account):
+    env = ZksyncEnv(rpc)
     env.add_account(account)
     with boa.swap_env(env):
         yield
