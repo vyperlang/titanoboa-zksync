@@ -2,10 +2,10 @@ from functools import cached_property
 
 from boa import Env
 from boa.contracts.abi.abi_contract import ABIContract, ABIContractFactory, ABIFunction
+from boa.rpc import to_bytes
 from boa.util.abi import Address
 
 from boa_zksync.compile import ZksyncCompilerData
-from boa_zksync.env import _ZksyncEnvMixin
 
 
 class ZksyncDeployer(ABIContractFactory):
@@ -25,14 +25,13 @@ class ZksyncDeployer(ABIContractFactory):
     def deploy(self, *args, value=0, **kwargs):
         env = Env.get_singleton()
 
-        initcode = bytes.fromhex(self.compiler_data.bytecode.removeprefix("0x"))
+        initcode = to_bytes(self.compiler_data.bytecode)
         constructor_calldata = (
             self.constructor.prepare_calldata(*args, **kwargs)
             if args or kwargs
             else b""
         )
 
-        assert isinstance(env, _ZksyncEnvMixin)
         address, _ = env.deploy_code(
             bytecode=initcode, value=value, constructor_calldata=constructor_calldata
         )

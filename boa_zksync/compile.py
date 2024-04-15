@@ -9,6 +9,7 @@ class ZksyncCompilerData:
     """
     Represents the output of the Zksync Vyper compiler (combined_json format).
     """
+
     method_identifiers: dict
     abi: list
     bytecode: str
@@ -18,20 +19,25 @@ class ZksyncCompilerData:
 
 
 def compile_zksync(file_name: str, compiler_args=None) -> ZksyncCompilerData:
-    compile_result = subprocess.run([
-        "zkvyper",
-        # make sure zkvyper uses the same vyper as boa
-        "--vyper",
-        which("vyper"),
-        # request JSON output
-        "-f",
-        "combined_json",
-        # pass any extra compiler args
-        *(compiler_args or []),
-        # pass the file name
-        "--",
-        file_name,
-    ], capture_output=True)
+    vyper_path = which("vyper")
+    assert vyper_path, "Vyper executable not found"
+    compile_result = subprocess.run(
+        [
+            "zkvyper",
+            # make sure zkvyper uses the same vyper as boa
+            "--vyper",
+            vyper_path,
+            # request JSON output
+            "-f",
+            "combined_json",
+            # pass any extra compiler args
+            *(compiler_args or []),
+            # pass the file name
+            "--",
+            file_name,
+        ],
+        capture_output=True,
+    )
 
     assert compile_result.returncode == 0, compile_result.stderr.decode()
     output = json.loads(compile_result.stdout.decode())

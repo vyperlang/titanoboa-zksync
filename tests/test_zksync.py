@@ -10,7 +10,7 @@ from boa.rpc import EthereumRPC
 from eth_account import Account
 from requests.exceptions import ConnectionError
 
-from boa_zksync.env import ZksyncEnv
+from boa_zksync.environment import ZksyncEnv
 from boa_zksync.interpret import loads_zksync
 
 code = """
@@ -98,3 +98,5 @@ def simple_contract():
 
 def test_total_supply(simple_contract):
     assert simple_contract.totalSupply() == STARTING_SUPPLY
+    simple_contract.update_total_supply(STARTING_SUPPLY * 2)
+    assert simple_contract.totalSupply() == STARTING_SUPPLY * 3

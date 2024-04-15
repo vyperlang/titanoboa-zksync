@@ -41,4 +41,4 @@ jobs:
             era_test_node --version && \
             rm era_test_node.tar.gz
 
-      - run: make lint coverage
+      - run: make coverage lint

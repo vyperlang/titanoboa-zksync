@@ -1,7 +1,14 @@
 import boa
 
-from boa_zksync.env import ZksyncEnv
-from boa_zksync.interpret import compile_zksync, load_zksync, loads_zksync, load_zksync_partial, loads_zksync_partial, eval_zksync
+from boa_zksync.environment import ZksyncEnv
+from boa_zksync.interpret import (
+    compile_zksync,
+    eval_zksync,
+    load_zksync,
+    load_zksync_partial,
+    loads_zksync,
+    loads_zksync_partial,
+)
 
 
 def set_zksync_env(url):
@@ -11,10 +18,7 @@ def set_zksync_env(url):
 def set_zksync_browser_env(address=None):
     # import locally because jupyter is generally not installed
     from boa_zksync.browser import ZksyncBrowserEnv
-    from boa.integrations.jupyter import browser
 
-    # Set a larger shared memory as the zkSync transactions are larger
-    browser.SHARED_MEMORY_LENGTH = 100 * 1024 + 1
     boa.set_env(ZksyncBrowserEnv(address))
 
 

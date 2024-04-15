@@ -6,7 +6,7 @@ except ImportError:
         "Please be careful when importing the browser files outside of Jupyter env."
     )
 
-from boa_zksync.env import _ZksyncEnvMixin
+from boa_zksync.environment import _ZksyncEnvMixin
 
 
 class ZksyncBrowserEnv(_ZksyncEnvMixin, BrowserEnv):
