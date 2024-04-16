@@ -57,10 +57,13 @@ class DeployTransaction:
     calldata: bytes  # the result of calling the deployer's create.prepare_calldata
     bytecode: bytes
     bytecode_hash: bytes
+    dependency_bytecodes: list[bytes]
+    dependency_bytecode_hashes: list[bytes]
     chain_id: int
     paymaster_params: tuple[int, bytes] | None
 
     def get_estimate_tx(self):
+        bytecodes = [self.bytecode] + self.dependency_bytecodes
         return {
             "transactionType": f"0x{_EIP712_TYPE.hex()}",
             "chain_id": self.chain_id,
@@ -74,7 +77,7 @@ class DeployTransaction:
             "data": f"0x{self.calldata.hex()}",
             "eip712Meta": {
                 "gasPerPubdata": f"0x{_GAS_PER_PUB_DATA_DEFAULT:0x}",
-                "factoryDeps": [[int(b) for b in self.bytecode]],
+                "factoryDeps": [[int(byte) for byte in bytecode] for bytecode in bytecodes],
             },
         }
 
@@ -100,7 +103,7 @@ class DeployTransaction:
                 "nonce": self.nonce,
                 "value": self.value,
                 "data": self.calldata,
-                "factoryDeps": [self.bytecode_hash],
+                "factoryDeps": [self.bytecode_hash] + self.dependency_bytecode_hashes,
                 "paymaster": paymaster,
                 "paymasterInput": paymaster_input,
             },
@@ -120,6 +123,7 @@ class DeployTransaction:
             elements=([_BINARY, _BINARY] if self.paymaster_params else None),
             strict=False,
         )
+        bytecodes = [self.bytecode] + self.dependency_bytecodes
         return _EIP712_TYPE + rlp.encode(
             [
                 _INT.serialize(self.nonce),
@@ -135,7 +139,7 @@ class DeployTransaction:
                 _INT.serialize(self.chain_id),
                 _BINARY.serialize(to_bytes(self.sender)),
                 _INT.serialize(_GAS_PER_PUB_DATA_DEFAULT),
-                List(elements=([_BINARY]), strict=False).serialize([self.bytecode]),
+                List(elements=([_BINARY]), strict=False).serialize(bytecodes),
                 _BINARY.serialize(
                     to_bytes(signature)
                     if isinstance(signature, str)

@@ -1,23 +1,21 @@
-import sys
+from collections import namedtuple
 from contextlib import contextmanager
 from functools import cached_property
 from hashlib import sha256
 from pathlib import Path
-from subprocess import Popen
-from typing import Any, Callable, Optional, cast
+from typing import Any, Optional, Iterable
 
 from boa.contracts.abi.abi_contract import ABIContract, ABIContractFactory
 from boa.environment import _AddressType
 from boa.interpret import json
-from boa.network import NetworkEnv, TransactionSettings, _EstimateGasFailed
+from boa.network import NetworkEnv, _EstimateGasFailed
 from boa.rpc import RPC, fixup_dict, to_bytes, to_hex, EthereumRPC
 from boa.util.abi import Address
 from eth.constants import ZERO_ADDRESS
 from eth.exceptions import VMError
-from eth_account import Account
 
 from boa_zksync.node import EraTestNode
-from boa_zksync.util import DeployTransaction, find_free_port, wait_url, stop_subprocess
+from boa_zksync.util import DeployTransaction
 
 _CONTRACT_DEPLOYER_ADDRESS = "0x0000000000000000000000000000000000008006"
 with open(Path(__file__).parent / "IContractDeployer.json") as f:
@@ -46,11 +44,9 @@ class ZksyncEnv(NetworkEnv):
 
     def _reset_fork(self, block_identifier="latest"):
         if isinstance(self._rpc, EraTestNode):
-            url = self._rpc._inner_url
+            rpc = self._rpc.inner_rpc
             del self._rpc
-        else:
-            url = self._rpc._rpc_url
-        self._rpc = EthereumRPC(url)
+            self._rpc = rpc
 
     def fork_rpc(self, rpc: EthereumRPC, reset_traces=True, block_identifier="safe", **kwargs):
         """
@@ -100,8 +96,7 @@ class ZksyncEnv(NetworkEnv):
         :param contract: The contract ABI.
         :return: The return value of the contract function.
         """
-        sender = self._check_sender(self._get_sender(sender))
-
+        sender = str(self._check_sender(self._get_sender(sender)))
         hexdata = to_hex(data)
 
         if not is_modifying:
@@ -133,6 +128,7 @@ class ZksyncEnv(NetworkEnv):
         value=0,
         bytecode=b"",
         constructor_calldata=b"",
+        dependency_bytecodes: Iterable[bytes] = (),
         salt=b"\0" * 32,
         **kwargs,
     ) -> tuple[Address, bytes]:
@@ -143,6 +139,7 @@ class ZksyncEnv(NetworkEnv):
         :param value: The amount of value to send with the transaction.
         :param bytecode: The bytecode of the contract to deploy.
         :param constructor_calldata: The calldata for the contract constructor.
+        :param dependency_bytecodes: The bytecodes of the blueprints.
         :param salt: The salt for the contract deployment.
         :param kwargs: Additional parameters for the transaction.
         :return: The address of the deployed contract and the bytecode hash.
@@ -171,6 +168,8 @@ class ZksyncEnv(NetworkEnv):
             ),
             bytecode=bytecode,
             bytecode_hash=bytecode_hash,
+            dependency_bytecodes=list(dependency_bytecodes),
+            dependency_bytecode_hashes=[_hash_code(bc) for bc in dependency_bytecodes],
             chain_id=chain_id,
             paymaster_params=kwargs.pop("paymaster_params", None),
         )

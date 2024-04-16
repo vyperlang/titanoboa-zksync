@@ -30,3 +30,4 @@ boa.loads_zksync_partial = loads_zksync_partial
 boa.eval_zksync = eval_zksync
 boa.set_zksync_env = set_zksync_env
 boa.set_zksync_browser_env = set_zksync_browser_env
+

@@ -23,17 +23,19 @@ class ZksyncDeployer(ABIContractFactory):
         self.compiler_data = compiler_data
 
     def deploy(self, *args, value=0, **kwargs):
-        env = Env.get_singleton()
-
         initcode = to_bytes(self.compiler_data.bytecode)
+        return self._deploy(initcode, *args, value=value, **kwargs)
+
+    def _deploy(self, bytecode, *args, value=0, dependency_bytecodes=(), **kwargs):
         constructor_calldata = (
             self.constructor.prepare_calldata(*args, **kwargs)
             if args or kwargs
             else b""
         )
 
+        env = Env.get_singleton()
         address, _ = env.deploy_code(
-            bytecode=initcode, value=value, constructor_calldata=constructor_calldata
+            bytecode=bytecode, value=value, constructor_calldata=constructor_calldata
         )
         return ABIContract(
             self._name,
