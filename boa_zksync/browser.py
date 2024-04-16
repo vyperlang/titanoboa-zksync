@@ -6,10 +6,10 @@ except ImportError:
         "Please be careful when importing the browser files outside of Jupyter env."
     )
 
-from boa_zksync.environment import _ZksyncEnvMixin
+from boa_zksync.environment import ZksyncEnv
 
 
-class ZksyncBrowserEnv(_ZksyncEnvMixin, BrowserEnv):
+class ZksyncBrowserEnv(ZksyncEnv, BrowserEnv):
     """
     A zkSync environment for deploying contracts using a browser wallet RPC.
     """

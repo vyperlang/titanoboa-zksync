@@ -1,20 +1,23 @@
+import sys
 from contextlib import contextmanager
 from functools import cached_property
 from hashlib import sha256
 from pathlib import Path
-from typing import Optional, Any, cast
+from subprocess import Popen
+from typing import Any, Callable, Optional, cast
 
-from boa.contracts.abi.abi_contract import ABIContractFactory, ABIContract
+from boa.contracts.abi.abi_contract import ABIContract, ABIContractFactory
+from boa.environment import _AddressType
 from boa.interpret import json
 from boa.network import NetworkEnv, TransactionSettings, _EstimateGasFailed
-from boa.environment import _AddressType
-from boa.rpc import RPC, to_hex, fixup_dict, to_bytes
+from boa.rpc import RPC, fixup_dict, to_bytes, to_hex, EthereumRPC
 from boa.util.abi import Address
 from eth.constants import ZERO_ADDRESS
 from eth.exceptions import VMError
 from eth_account import Account
 
-from boa_zksync.types import DeployTransaction
+from boa_zksync.node import EraTestNode
+from boa_zksync.util import DeployTransaction, find_free_port, wait_url, stop_subprocess
 
 _CONTRACT_DEPLOYER_ADDRESS = "0x0000000000000000000000000000000000008006"
 with open(Path(__file__).parent / "IContractDeployer.json") as f:
@@ -23,37 +26,33 @@ with open(Path(__file__).parent / "IContractDeployer.json") as f:
     )
 
 
-class _ZksyncEnvMixin:
+class ZksyncEnv(NetworkEnv):
     """
     An implementation of the Env class for zkSync environments.
     This is a mix-in so the logic may be reused in both network and browser modes.
     """
 
-    _rpc: RPC
-    _accounts: dict[str, Account]
-    eoa: Address
-    tx_settings: TransactionSettings
-    _check_sender: callable
-    _get_sender: callable
-    _send_txn: callable
-
-    def __init__(
-        self,
-        rpc: str | RPC,
-        *args, **kwargs
-    ):
-        cast(super(), NetworkEnv).__init__(rpc, *args, **kwargs)
+    def __init__(self, rpc: str | RPC, *args, **kwargs):
+        super().__init__(rpc, *args, **kwargs)
         self.evm = None  # not used in zkSync
 
     @cached_property
     def create(self):
-        try:
-            return next(f for f in CONTRACT_DEPLOYER._functions if f.full_signature == "create(bytes32,bytes32,bytes)")
-        except StopIteration:
-            signatures = [f.full_signature for f in CONTRACT_DEPLOYER._functions]
-            raise ValueError(f"No create function found in ContractDeployer ABI. Found: {signatures}")
+        return next(
+            func
+            for func in CONTRACT_DEPLOYER._functions
+            if func.full_signature == "create(bytes32,bytes32,bytes)"
+        )
 
-    def fork_rpc(self, rpc: RPC, reset_traces=True, block_identifier="safe", **kwargs):
+    def _reset_fork(self, block_identifier="latest"):
+        if isinstance(self._rpc, EraTestNode):
+            url = self._rpc._inner_url
+            del self._rpc
+        else:
+            url = self._rpc._rpc_url
+        self._rpc = EthereumRPC(url)
+
+    def fork_rpc(self, rpc: EthereumRPC, reset_traces=True, block_identifier="safe", **kwargs):
         """
         Fork the environment to a local chain.
         :param rpc: RPC to fork from
@@ -61,7 +60,19 @@ class _ZksyncEnvMixin:
         :param block_identifier: Block identifier to fork from
         :param kwargs: Additional arguments for the RPC
         """
-        # TODO
+        self._reset_fork(block_identifier)
+        if reset_traces:
+            self.sha3_trace = {}
+            self.sstore_trace = {}
+        self._rpc = EraTestNode(rpc, block_identifier)
+
+    def register_contract(self, address, obj):
+        addr = Address(address)
+        self._contracts[addr.canonical_address] = obj
+        # also register it in the registry for
+        # create_minimal_proxy_to and create_copy_of
+        bytecode = self._rpc.fetch("eth_getCode", [address, "latest"])
+        self._code_registry[bytecode] = obj
 
     @contextmanager
     def anchor(self):
@@ -177,12 +188,6 @@ class _ZksyncEnvMixin:
         return self._rpc.fetch("eth_getCode", [address, "latest"])
 
 
-class ZksyncEnv(_ZksyncEnvMixin, NetworkEnv):
-    """
-    A zkSync environment for deploying contracts using a network RPC.
-    """
-
-
 def _hash_code(bytecode: bytes) -> bytes:
     """
     Hashes the bytecode for contract deployment, according to the zkSync spec.
@@ -197,7 +202,7 @@ def _hash_code(bytecode: bytes) -> bytes:
 
 
 class ZksyncComputation:
-    def __init__(self, output: bytes|None=None, error: VMError|None=None):
+    def __init__(self, output: bytes | None = None, error: VMError | None = None):
         self._output = output
         self._error = error
 
