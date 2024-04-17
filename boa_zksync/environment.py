@@ -1,15 +1,16 @@
 from collections import namedtuple
 from contextlib import contextmanager
+from dataclasses import dataclass, field
 from functools import cached_property
 from hashlib import sha256
 from pathlib import Path
-from typing import Any, Optional, Iterable
+from typing import Any, Iterable, Optional
 
 from boa.contracts.abi.abi_contract import ABIContract, ABIContractFactory
 from boa.environment import _AddressType
 from boa.interpret import json
 from boa.network import NetworkEnv, _EstimateGasFailed
-from boa.rpc import RPC, fixup_dict, to_bytes, to_hex, EthereumRPC
+from boa.rpc import RPC, EthereumRPC, fixup_dict, to_bytes, to_hex
 from boa.util.abi import Address
 from eth.constants import ZERO_ADDRESS
 from eth.exceptions import VMError
@@ -48,7 +49,9 @@ class ZksyncEnv(NetworkEnv):
             del self._rpc
             self._rpc = rpc
 
-    def fork_rpc(self, rpc: EthereumRPC, reset_traces=True, block_identifier="safe", **kwargs):
+    def fork_rpc(
+        self, rpc: EthereumRPC, reset_traces=True, block_identifier="safe", **kwargs
+    ):
         """
         Fork the environment to a local chain.
         :param rpc: RPC to fork from
@@ -58,8 +61,8 @@ class ZksyncEnv(NetworkEnv):
         """
         self._reset_fork(block_identifier)
         if reset_traces:
-            self.sha3_trace = {}
-            self.sstore_trace = {}
+            self.sha3_trace: dict = {}
+            self.sstore_trace: dict = {}
         self._rpc = EraTestNode(rpc, block_identifier)
 
     def register_contract(self, address, obj):
@@ -99,27 +102,34 @@ class ZksyncEnv(NetworkEnv):
         sender = str(self._check_sender(self._get_sender(sender)))
         hexdata = to_hex(data)
 
+        args = {
+            "from": sender,
+            "to": to_address,
+            "gas": gas,
+            "value": value,
+            "data": hexdata,
+        }
         if not is_modifying:
-            args = fixup_dict(
-                {
-                    "from": sender,
-                    "to": to_address,
-                    "gas": gas,
-                    "value": value,
-                    "data": hexdata,
-                }
-            )
-            output = self._rpc.fetch("eth_call", [args, "latest"])
-            return ZksyncComputation(to_bytes(output))
+            output = self._rpc.fetch("eth_call", [fixup_dict(args), "latest"])
+            return ZksyncComputation(args, to_bytes(output))
 
         try:
             receipt, trace = self._send_txn(
                 from_=sender, to=to_address, value=value, gas=gas, data=hexdata
             )
         except _EstimateGasFailed:
-            return ZksyncComputation(error=VMError("Estimate gas failed"))
+            return ZksyncComputation(args, error=VMError("Estimate gas failed"))
 
-        return ZksyncComputation(receipt.get("output", b""))
+        try:
+            # when calling create_from_blueprint, the address is not returned
+            # we get it from the logs by searching for the event. todo: remove this hack
+            deploy_topic = '0x290afdae231a3fc0bbae8b1af63698b0a1d79b21ad17df0342dfb952fe74f8e5'
+            output = next(x['topics'][3] for x in receipt['logs'] if x['topics'][0] == deploy_topic)
+        except StopIteration:
+            # TODO: This does not return the correct value either.
+            output = trace.returndata
+
+        return ZksyncComputation(args, to_bytes(output))
 
     def deploy_code(
         self,
@@ -174,11 +184,12 @@ class ZksyncEnv(NetworkEnv):
             paymaster_params=kwargs.pop("paymaster_params", None),
         )
 
-        estimated_gas = int(
-            self._rpc.fetch("eth_estimateGas", [tx.get_estimate_tx()]), 16
-        )
+        estimated_gas = self._rpc.fetch("eth_estimateGas", [tx.get_estimate_tx()])
+        estimated_gas = int(estimated_gas, 16)
+
         signature = tx.sign_typed_data(self._accounts[sender], estimated_gas)
         raw_tx = tx.rlp_encode(signature, estimated_gas)
+
         tx_hash = self._rpc.fetch("eth_sendRawTransaction", ["0x" + raw_tx.hex()])
         receipt = self._rpc.wait_for_tx_receipt(tx_hash, self.tx_settings.poll_timeout)
         return Address(receipt["contractAddress"]), bytecode
@@ -200,34 +211,26 @@ def _hash_code(bytecode: bytes) -> bytes:
     return b"\x01\00" + bytecode_size.to_bytes(2, byteorder="big") + bytecode_hash[4:]
 
 
+@dataclass
 class ZksyncComputation:
-    def __init__(self, output: bytes | None = None, error: VMError | None = None):
-        self._output = output
-        self._error = error
+    args: dict
+    output: bytes | None = None
+    error: VMError | None = None
+    children: list["ZksyncComputation"] = field(default_factory=list)
 
     @property
     def is_success(self) -> bool:
         """
         Return ``True`` if the computation did not result in an error.
         """
-        return self._error is None
+        return self.error is None
 
     @property
     def is_error(self) -> bool:
         """
         Return ``True`` if the computation resulted in an error.
         """
-        return self._error is not None
-
-    @property
-    def error(self) -> VMError:
-        """
-        Return the :class:`~eth.exceptions.VMError` of the computation.
-        Raise ``AttributeError`` if no error exists.
-        """
-        if self._error is None:
-            raise AttributeError("No error exists for this computation")
-        return self._error
+        return self.error is not None
 
     def raise_if_error(self) -> None:
         """
@@ -239,10 +242,7 @@ class ZksyncComputation:
             raise self.error
 
     @property
-    def output(self) -> bytes:
-        """
-        Get the return value of the computation.
-        """
-        if self._output is None:
-            raise AttributeError("No output exists for this computation")
-        return self._output
+    def msg(self):
+        Message = namedtuple('Message', ['sender','to','gas','value','data'])
+        args = self.args.copy()
+        return Message(args.pop("from"), data=to_bytes(args.pop("data")), **args)

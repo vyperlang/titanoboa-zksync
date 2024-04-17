@@ -10,8 +10,8 @@ from boa.rpc import to_bytes
 from eth_account import Account
 from eth_account.datastructures import SignedMessage
 from eth_account.messages import encode_typed_data
-from rlp.sedes import BigEndianInt, Binary, List
 from requests.exceptions import ConnectionError
+from rlp.sedes import BigEndianInt, Binary, List
 
 _EIP712_TYPE = bytes.fromhex("71")
 _EIP712_TYPES_SPEC = {
@@ -77,7 +77,9 @@ class DeployTransaction:
             "data": f"0x{self.calldata.hex()}",
             "eip712Meta": {
                 "gasPerPubdata": f"0x{_GAS_PER_PUB_DATA_DEFAULT:0x}",
-                "factoryDeps": [[int(byte) for byte in bytecode] for bytecode in bytecodes],
+                "factoryDeps": [
+                    [int(byte) for byte in bytecode] for bytecode in bytecodes
+                ],
             },
         }
 

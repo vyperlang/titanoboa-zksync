@@ -10,6 +10,7 @@ mypy:
 		--follow-imports=silent \
 		--ignore-missing-imports \
 		--implicit-optional \
+		--install-types \
 		-p boa_zksync
 
 black:

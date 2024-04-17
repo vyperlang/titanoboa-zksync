@@ -16,6 +16,12 @@ def zksync_env(rpc, account):
     env = ZksyncEnv(rpc)
     env.add_account(account)
     with boa.swap_env(env):
+        yield env
+
+
+@pytest.fixture(autouse=True)
+def cleanup_env(zksync_env):
+    with zksync_env.anchor():
         yield
 
 

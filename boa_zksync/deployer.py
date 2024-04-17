@@ -6,6 +6,7 @@ from boa.rpc import to_bytes
 from boa.util.abi import Address
 
 from boa_zksync.compile import ZksyncCompilerData
+from boa_zksync.environment import ZksyncEnv
 
 
 class ZksyncDeployer(ABIContractFactory):
@@ -23,28 +24,38 @@ class ZksyncDeployer(ABIContractFactory):
         self.compiler_data = compiler_data
 
     def deploy(self, *args, value=0, **kwargs):
-        initcode = to_bytes(self.compiler_data.bytecode)
-        return self._deploy(initcode, *args, value=value, **kwargs)
-
-    def _deploy(self, bytecode, *args, value=0, dependency_bytecodes=(), **kwargs):
-        constructor_calldata = (
-            self.constructor.prepare_calldata(*args, **kwargs)
-            if args or kwargs
-            else b""
-        )
-
         env = Env.get_singleton()
+        assert isinstance(
+            env, ZksyncEnv
+        ), "ZksyncDeployer can only be used in zkSync environments"
+
         address, _ = env.deploy_code(
-            bytecode=bytecode, value=value, constructor_calldata=constructor_calldata
+            bytecode=to_bytes(self.compiler_data.bytecode),
+            value=value,
+            constructor_calldata=(
+                self.constructor.prepare_calldata(*args, **kwargs)
+                if args or kwargs
+                else b""
+            ),
         )
-        return ABIContract(
+        address = Address(address)
+        abi_contract = ABIContract(
             self._name,
             self.abi,
             self._functions,
-            address=Address(address),
+            address=address,
             filename=self._filename,
             env=env,
         )
+        env.register_contract(address, self)
+        return abi_contract
+
+    def deploy_as_blueprint(self, *args, **kwargs):
+        """
+        In zkSync, any contract can be used as a blueprint.
+        Note that we do need constructor arguments for this.
+        """
+        return self.deploy(*args, **kwargs)
 
     @cached_property
     def constructor(self):
