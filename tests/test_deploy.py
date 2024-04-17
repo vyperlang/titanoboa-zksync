@@ -1,11 +1,9 @@
 import sys
 from subprocess import Popen
 
-import boa
 import pytest
-from boa.util.eip5202 import get_create2_address
 
-from boa_zksync.interpret import loads_zksync, loads_zksync_partial
+from boa import loads, loads_partial
 from boa_zksync.util import find_free_port, wait_url, stop_subprocess
 
 STARTING_SUPPLY = 100
@@ -44,7 +42,7 @@ def update_total_supply(t: uint16):
 def raise_exception(t: uint256):
     raise "oh no!"
 """
-    return loads_zksync(code, STARTING_SUPPLY)
+    return loads(code, STARTING_SUPPLY)
 
 
 def test_total_supply(simple_contract):
@@ -72,8 +70,8 @@ def some_function() -> uint256:
 def create_child(blueprint: address, salt: bytes32, val: uint256) -> address:
     return create_from_blueprint(blueprint, val, salt=salt)
 """
-    blueprint = loads_zksync_partial(blueprint_code).deploy_as_blueprint()
-    factory = loads_zksync(factory_code)
+    blueprint = loads_partial(blueprint_code).deploy_as_blueprint()
+    factory = loads(factory_code)
 
     salt = b"\x00" * 32
 
@@ -82,7 +80,7 @@ def create_child(blueprint: address, salt: bytes32, val: uint256) -> address:
     # assert child_contract_address == get_create2_address(
     #     blueprint_bytecode, factory.address, salt
     # ).some_function()
-    child = loads_zksync_partial(blueprint_code).at(child_contract_address)
+    child = loads_partial(blueprint_code).at(child_contract_address)
     assert child.some_function() == 5
 
 
@@ -105,10 +103,26 @@ def some_function() -> uint256:
 def create_child(blueprint: address, val: uint256) -> address:
     return create_from_blueprint(blueprint, val)
 """
-    blueprint = loads_zksync_partial(blueprint_code).deploy_as_blueprint()
-    factory = loads_zksync(factory_code)
+    blueprint = loads_partial(blueprint_code).deploy_as_blueprint()
+    factory = loads(factory_code)
 
     child_contract_address = factory.create_child(blueprint.address, 5)
 
-    child = loads_zksync_partial(blueprint_code).at(child_contract_address)
+    child = loads_partial(blueprint_code).at(child_contract_address)
     assert child.some_function() == 5
+
+
+def test_internal_call():
+    code = """
+@internal
+@view
+def foo() -> uint256:
+    return 123
+
+@external
+@view
+def bar() -> uint256:
+    return self.foo()
+    """
+    contract = loads(code)
+    assert contract.bar() == 123

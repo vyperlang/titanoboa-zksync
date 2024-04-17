@@ -1,24 +1,12 @@
 import json
 import subprocess
-from dataclasses import dataclass
 from shutil import which
+from tempfile import TemporaryDirectory
+
+from boa_zksync.types import ZksyncCompilerData
 
 
-@dataclass
-class ZksyncCompilerData:
-    """
-    Represents the output of the Zksync Vyper compiler (combined_json format).
-    """
-
-    method_identifiers: dict
-    abi: list
-    bytecode: str
-    bytecode_runtime: str
-    warnings: list
-    factory_deps: list
-
-
-def compile_zksync(file_name: str, compiler_args=None) -> ZksyncCompilerData:
+def compile_zksync(filename: str, compiler_args=None) -> ZksyncCompilerData:
     vyper_path = which("vyper")
     assert vyper_path, "Vyper executable not found"
     compile_result = subprocess.run(
@@ -34,11 +22,19 @@ def compile_zksync(file_name: str, compiler_args=None) -> ZksyncCompilerData:
             *(compiler_args or []),
             # pass the file name
             "--",
-            file_name,
+            filename,
         ],
         capture_output=True,
     )
 
     assert compile_result.returncode == 0, compile_result.stderr.decode()
     output = json.loads(compile_result.stdout.decode())
-    return ZksyncCompilerData(**output[file_name])
+    return ZksyncCompilerData(**output[filename])
+
+
+def compile_zksync_source(source_code: str, name: str, compiler_args=None) -> ZksyncCompilerData:
+    with TemporaryDirectory() as tempdir:
+        filename = f"{tempdir}/{name}.vy"
+        with open(filename, "w") as file:
+            file.write(source_code)
+        return compile_zksync(filename, compiler_args)

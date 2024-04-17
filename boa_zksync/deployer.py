@@ -5,8 +5,7 @@ from boa.contracts.abi.abi_contract import ABIContract, ABIContractFactory, ABIF
 from boa.rpc import to_bytes
 from boa.util.abi import Address
 
-from boa_zksync.compile import ZksyncCompilerData
-from boa_zksync.environment import ZksyncEnv
+from boa_zksync.types import ZksyncCompilerData
 
 
 class ZksyncDeployer(ABIContractFactory):
@@ -25,6 +24,7 @@ class ZksyncDeployer(ABIContractFactory):
 
     def deploy(self, *args, value=0, **kwargs):
         env = Env.get_singleton()
+        from boa_zksync.environment import ZksyncEnv
         assert isinstance(
             env, ZksyncEnv
         ), "ZksyncDeployer can only be used in zkSync environments"

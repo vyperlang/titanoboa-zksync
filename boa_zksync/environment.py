@@ -1,6 +1,5 @@
-from collections import namedtuple
+import logging
 from contextlib import contextmanager
-from dataclasses import dataclass, field
 from functools import cached_property
 from hashlib import sha256
 from pathlib import Path
@@ -12,11 +11,13 @@ from boa.interpret import json
 from boa.network import NetworkEnv, _EstimateGasFailed
 from boa.rpc import RPC, EthereumRPC, fixup_dict, to_bytes, to_hex
 from boa.util.abi import Address
+from boa_zksync.compile import compile_zksync, compile_zksync_source
 from eth.constants import ZERO_ADDRESS
 from eth.exceptions import VMError
 
+from boa_zksync.deployer import ZksyncDeployer
 from boa_zksync.node import EraTestNode
-from boa_zksync.util import DeployTransaction
+from boa_zksync.types import DeployTransaction, ZksyncComputation, ZksyncMessage
 
 _CONTRACT_DEPLOYER_ADDRESS = "0x0000000000000000000000000000000000008006"
 with open(Path(__file__).parent / "IContractDeployer.json") as f:
@@ -99,24 +100,15 @@ class ZksyncEnv(NetworkEnv):
         :param contract: The contract ABI.
         :return: The return value of the contract function.
         """
-        sender = str(self._check_sender(self._get_sender(sender)))
-        hexdata = to_hex(data)
+        sender = self._check_sender(self._get_sender(sender))
+        args = ZksyncMessage(sender, to_address, gas or 0, value, data)
 
-        args = {
-            "from": sender,
-            "to": to_address,
-            "gas": gas,
-            "value": value,
-            "data": hexdata,
-        }
         if not is_modifying:
-            output = self._rpc.fetch("eth_call", [fixup_dict(args), "latest"])
+            output = self._rpc.fetch("eth_call", [args.as_json_dict(), "latest"])
             return ZksyncComputation(args, to_bytes(output))
 
         try:
-            receipt, trace = self._send_txn(
-                from_=sender, to=to_address, value=value, gas=gas, data=hexdata
-            )
+            receipt, trace = self._send_txn(**args.as_tx_params())
         except _EstimateGasFailed:
             return ZksyncComputation(args, error=VMError("Estimate gas failed"))
 
@@ -197,6 +189,24 @@ class ZksyncEnv(NetworkEnv):
     def get_code(self, address):
         return self._rpc.fetch("eth_getCode", [address, "latest"])
 
+    def create_deployer(
+        self,
+        source_code: str,
+        name: str = None,
+        filename: str = None,
+        dedent: bool = True,
+        compiler_args: dict = None,
+    ) -> "ZksyncDeployer":
+
+        if filename:
+            compiler_data = compile_zksync(filename, compiler_args)
+        else:
+            compiler_data = compile_zksync_source(source_code, name, compiler_args)
+
+        if not compiler_data.abi:
+            logging.warning("No ABI found in compiled contract")
+        return ZksyncDeployer(compiler_data, name or filename, filename=filename)
+
 
 def _hash_code(bytecode: bytes) -> bytes:
     """
@@ -209,40 +219,3 @@ def _hash_code(bytecode: bytes) -> bytes:
     assert bytecode_size < 2**16, "Bytecode length must be less than 2^16"
     bytecode_hash = sha256(bytecode).digest()
     return b"\x01\00" + bytecode_size.to_bytes(2, byteorder="big") + bytecode_hash[4:]
-
-
-@dataclass
-class ZksyncComputation:
-    args: dict
-    output: bytes | None = None
-    error: VMError | None = None
-    children: list["ZksyncComputation"] = field(default_factory=list)
-
-    @property
-    def is_success(self) -> bool:
-        """
-        Return ``True`` if the computation did not result in an error.
-        """
-        return self.error is None
-
-    @property
-    def is_error(self) -> bool:
-        """
-        Return ``True`` if the computation resulted in an error.
-        """
-        return self.error is not None
-
-    def raise_if_error(self) -> None:
-        """
-        If there was an error during computation, raise it as an exception immediately.
-
-        :raise VMError:
-        """
-        if self.is_error:
-            raise self.error
-
-    @property
-    def msg(self):
-        Message = namedtuple('Message', ['sender','to','gas','value','data'])
-        args = self.args.copy()
-        return Message(args.pop("from"), data=to_bytes(args.pop("data")), **args)
