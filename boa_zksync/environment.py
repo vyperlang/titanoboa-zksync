@@ -50,6 +50,11 @@ class ZksyncEnv(NetworkEnv):
             del self._rpc
             self._rpc = rpc
 
+    def fork(self, url: str = None, reset_traces=True, block_identifier="safe", **kwargs):
+        if url:
+            return super().fork(url, reset_traces, block_identifier, **kwargs)
+        return self.fork_rpc(self._rpc, reset_traces, block_identifier, **kwargs)
+
     def fork_rpc(
         self, rpc: EthereumRPC, reset_traces=True, block_identifier="safe", **kwargs
     ):
@@ -108,7 +113,9 @@ class ZksyncEnv(NetworkEnv):
         if is_modifying:
             try:
                 receipt, trace = self._send_txn(**args.as_tx_params())
-                assert traced_computation.is_error == trace.is_error, f"VMError mismatch: {traced_computation.error} != {trace.error}"
+                assert (
+                    traced_computation.is_error == trace.is_error
+                ), f"VMError mismatch: {traced_computation.error} != {trace.error}"
             except _EstimateGasFailed:
                 return ZksyncComputation(args, error=VMError("Estimate gas failed"))
 
@@ -188,14 +195,14 @@ class ZksyncEnv(NetworkEnv):
         dedent: bool = True,
         compiler_args: dict = None,
     ) -> "ZksyncDeployer":
+        if not name:
+            name = Path(filename).stem if filename else "<anonymous contract>"
 
         if filename:
             compiler_data = compile_zksync(filename, compiler_args)
         else:
             compiler_data = compile_zksync_source(source_code, name, compiler_args)
 
-        if not compiler_data.abi:
-            logging.warning("No ABI found in compiled contract")
         return ZksyncDeployer.from_abi_dict(compiler_data.abi, name, filename, compiler_data)
 
 

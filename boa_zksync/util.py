@@ -32,6 +32,6 @@ def stop_subprocess(proc: Popen[bytes]):
     proc.terminate()
     try:
         proc.wait(timeout=10)
-    except TimeoutExpired:
+    except TimeoutExpired:  # pragma: no cover
         proc.kill()
         proc.wait(timeout=1)

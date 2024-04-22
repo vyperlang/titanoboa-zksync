@@ -1,33 +1,18 @@
 import sys
 from subprocess import Popen
 
-import pytest
-
 import boa
+import pytest
 from boa import BoaError
 from boa.contracts.base_evm_contract import StackTrace
 
-from boa_zksync.util import find_free_port, wait_url, stop_subprocess
+from boa_zksync.util import find_free_port, stop_subprocess, wait_url
 
 STARTING_SUPPLY = 100
 
 
-@pytest.fixture(scope="session")
-def era_test_node():
-    era_port = find_free_port()
-    era_node = Popen([
-        "era_test_node",
-        "--show-calls", 'user',
-        "--port",
-        f"{era_port}",
-        "run"
-    ], stdout=sys.stdout, stderr=sys.stderr)
-    yield wait_url(f"http://localhost:{era_port}")
-    stop_subprocess(era_node)
-
-
 @pytest.fixture(scope="module")
-def simple_contract():
+def simple_contract(zksync_env):
     code = """
 totalSupply: public(uint256)
 balances: HashMap[address, uint256]
@@ -55,8 +40,8 @@ def test_total_supply(simple_contract):
     assert simple_contract.totalSupply() == STARTING_SUPPLY * 3
 
 
-def test_blueprint():
-    blueprint_code = f"""
+def test_blueprint(zksync_env):
+    blueprint_code = """
 val: public(uint256)
 
 @external
@@ -74,7 +59,9 @@ def some_function() -> uint256:
 def create_child(blueprint: address, salt: bytes32, val: uint256) -> address:
     return create_from_blueprint(blueprint, val, salt=salt)
 """
-    blueprint = boa.loads_partial(blueprint_code, name="Blueprint").deploy_as_blueprint()
+    blueprint = boa.loads_partial(
+        blueprint_code, name="Blueprint"
+    ).deploy_as_blueprint()
     factory = boa.loads(factory_code, name="Factory")
 
     salt = b"\x00" * 32
@@ -88,8 +75,8 @@ def create_child(blueprint: address, salt: bytes32, val: uint256) -> address:
     assert child.some_function() == 5
 
 
-def test_blueprint_immutable():
-    blueprint_code = f"""
+def test_blueprint_immutable(zksync_env):
+    blueprint_code = """
 VAL: immutable(uint256)
 
 @external
@@ -107,7 +94,9 @@ def some_function() -> uint256:
 def create_child(blueprint: address, val: uint256) -> address:
     return create_from_blueprint(blueprint, val)
 """
-    blueprint = boa.loads_partial(blueprint_code, name="blueprint").deploy_as_blueprint()
+    blueprint = boa.loads_partial(
+        blueprint_code, name="blueprint"
+    ).deploy_as_blueprint()
     factory = boa.loads(factory_code, name="factory")
 
     child_contract_address = factory.create_child(blueprint.address, 5)
@@ -116,7 +105,7 @@ def create_child(blueprint: address, val: uint256) -> address:
     assert child.some_function() == 5
 
 
-def test_internal_call():
+def test_internal_call(zksync_env):
     code = """
 @internal
 @view
@@ -132,7 +121,7 @@ def bar() -> uint256:
     assert contract.bar() == 123
 
 
-def test_stack_trace():
+def test_stack_trace(zksync_env):
     called_contract = boa.loads(
         """
 @internal
@@ -145,7 +134,8 @@ def _get_name() -> String[32]:
 @view
 def name() -> String[32]:
     return self._get_name()
-    """, name="CalledContract"
+    """,
+        name="CalledContract",
     )
     caller_contract = boa.loads(
         """
@@ -156,18 +146,26 @@ interface HasName:
 @view
 def get_name_of(addr: HasName) -> String[32]:
     return addr.name()
-    """, name="CallerContract"
+    """,
+        name="CallerContract",
     )
 
     # boa.reverts does not give us the stack trace, use pytest.raises instead
     with pytest.raises(BoaError) as ctx:
         caller_contract.get_name_of(called_contract)
 
-    trace, = ctx.value.args
-    assert trace == StackTrace([
-        f"  (<CalledContract interface at {called_contract.address}>.name() -> ['string'])",
-        f"  (<CallerContract interface at {caller_contract.address}>.get_name_of(address) -> ['string'])",
-        "   <Unknown contract 0x0000000000000000000000000000000000008009>",  # MsgValueSimulator
-        "   <Unknown contract 0x0000000000000000000000000000000000008002>",  # AccountCodeStorage
-        f"  (<CallerContract interface at {caller_contract.address}>.get_name_of(address) -> ['string'])",
-    ])
+    (trace,) = ctx.value.args
+    assert trace == StackTrace(
+        [
+            f"  (<CalledContract interface at {called_contract.address}>."
+            f"name() -> ['string'])",
+            f"  (<CallerContract interface at {caller_contract.address}>."
+            f"get_name_of(address) -> ['string'])",
+            # MsgValueSimulator
+            "   <Unknown contract 0x0000000000000000000000000000000000008009>",
+            # AccountCodeStorage
+            "   <Unknown contract 0x0000000000000000000000000000000000008002>",
+            f"  (<CallerContract interface at {caller_contract.address}>."
+            f"get_name_of(address) -> ['string'])",
+        ]
+    )

@@ -32,7 +32,9 @@ def compile_zksync(filename: str, compiler_args=None) -> ZksyncCompilerData:
     return ZksyncCompilerData(**output[filename])
 
 
-def compile_zksync_source(source_code: str, name: str, compiler_args=None) -> ZksyncCompilerData:
+def compile_zksync_source(
+    source_code: str, name: str, compiler_args=None
+) -> ZksyncCompilerData:
     with TemporaryDirectory() as tempdir:
         filename = f"{tempdir}/{name}.vy"
         with open(filename, "w") as file:

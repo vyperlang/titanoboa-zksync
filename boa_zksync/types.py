@@ -1,9 +1,9 @@
 from dataclasses import dataclass, field
 
 import rlp
-from boa.rpc import to_bytes, fixup_dict, to_hex
+from boa.rpc import fixup_dict, to_bytes, to_hex
 from boa.util.abi import Address
-from eth.exceptions import VMError, Revert
+from eth.exceptions import Revert, VMError
 from eth_account import Account
 from eth_account.datastructures import SignedMessage
 from eth_account.messages import encode_typed_data
@@ -176,13 +176,15 @@ class ZksyncMessage:
         return to_bytes(self.to)
 
     def as_json_dict(self, sender_field="from"):
-        return fixup_dict({
-            sender_field: self.sender,
-            "to": self.to,
-            "gas": self.gas,
-            "value": self.value,
-            "data": to_hex(self.data),
-        })
+        return fixup_dict(
+            {
+                sender_field: self.sender,
+                "to": self.to,
+                "gas": self.gas,
+                "value": self.value,
+                "data": to_hex(self.data),
+            }
+        )
 
     def as_tx_params(self):
         return self.as_json_dict(sender_field="from_")
@@ -197,7 +199,7 @@ class ZksyncComputation:
 
     @classmethod
     def from_trace(cls, output: dict) -> "ZksyncComputation":
-        """ Recursively constructs a ZksyncComputation from a debug_traceCall output. """
+        """Recursively constructs a ZksyncComputation from a debug_traceCall output."""
         error = None
         if output.get("error") is not None:
             error = VMError(output["error"])
@@ -237,5 +239,5 @@ class ZksyncComputation:
 
         :raise VMError:
         """
-        if self.is_error:
+        if self.error:
             raise self.error
