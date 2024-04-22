@@ -9,12 +9,12 @@ from boa.contracts.abi.abi_contract import ABIContract, ABIContractFactory
 from boa.environment import _AddressType
 from boa.interpret import json
 from boa.network import NetworkEnv, _EstimateGasFailed
-from boa.rpc import RPC, EthereumRPC, fixup_dict, to_bytes, to_hex
+from boa.rpc import RPC, EthereumRPC
 from boa.util.abi import Address
-from boa_zksync.compile import compile_zksync, compile_zksync_source
 from eth.constants import ZERO_ADDRESS
 from eth.exceptions import VMError
 
+from boa_zksync.compile import compile_zksync, compile_zksync_source
 from boa_zksync.deployer import ZksyncDeployer
 from boa_zksync.node import EraTestNode
 from boa_zksync.types import DeployTransaction, ZksyncComputation, ZksyncMessage
@@ -103,25 +103,16 @@ class ZksyncEnv(NetworkEnv):
         sender = self._check_sender(self._get_sender(sender))
         args = ZksyncMessage(sender, to_address, gas or 0, value, data)
 
-        if not is_modifying:
-            output = self._rpc.fetch("eth_call", [args.as_json_dict(), "latest"])
-            return ZksyncComputation(args, to_bytes(output))
+        trace_call = self._rpc.fetch("debug_traceCall", [args.as_json_dict(), "latest"])
+        traced_computation = ZksyncComputation.from_trace(trace_call)
+        if is_modifying:
+            try:
+                receipt, trace = self._send_txn(**args.as_tx_params())
+                assert traced_computation.is_error == trace.is_error, f"VMError mismatch: {traced_computation.error} != {trace.error}"
+            except _EstimateGasFailed:
+                return ZksyncComputation(args, error=VMError("Estimate gas failed"))
 
-        try:
-            receipt, trace = self._send_txn(**args.as_tx_params())
-        except _EstimateGasFailed:
-            return ZksyncComputation(args, error=VMError("Estimate gas failed"))
-
-        try:
-            # when calling create_from_blueprint, the address is not returned
-            # we get it from the logs by searching for the event. todo: remove this hack
-            deploy_topic = '0x290afdae231a3fc0bbae8b1af63698b0a1d79b21ad17df0342dfb952fe74f8e5'
-            output = next(x['topics'][3] for x in receipt['logs'] if x['topics'][0] == deploy_topic)
-        except StopIteration:
-            # TODO: This does not return the correct value either.
-            output = trace.returndata
-
-        return ZksyncComputation(args, to_bytes(output))
+        return traced_computation
 
     def deploy_code(
         self,
@@ -205,7 +196,7 @@ class ZksyncEnv(NetworkEnv):
 
         if not compiler_data.abi:
             logging.warning("No ABI found in compiled contract")
-        return ZksyncDeployer(compiler_data, name or filename, filename=filename)
+        return ZksyncDeployer.from_abi_dict(compiler_data.abi, name, filename, compiler_data)
 
 
 def _hash_code(bytecode: bytes) -> bytes:

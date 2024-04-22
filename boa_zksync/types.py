@@ -1,15 +1,13 @@
-from collections import namedtuple
 from dataclasses import dataclass, field
 
 import rlp
 from boa.rpc import to_bytes, fixup_dict, to_hex
 from boa.util.abi import Address
-from eth.exceptions import VMError
+from eth.exceptions import VMError, Revert
 from eth_account import Account
 from eth_account.datastructures import SignedMessage
 from eth_account.messages import encode_typed_data
 from rlp.sedes import BigEndianInt, Binary, List
-
 
 _EIP712_TYPE = bytes.fromhex("71")
 _EIP712_TYPES_SPEC = {
@@ -167,10 +165,15 @@ class ZksyncCompilerData:
 @dataclass
 class ZksyncMessage:
     sender: Address
-    to: str
+    to: Address
     gas: int
     value: int
     data: bytes
+
+    @property
+    def code_address(self) -> bytes:
+        # this is used by boa to find the contract address for stack traces
+        return to_bytes(self.to)
 
     def as_json_dict(self, sender_field="from"):
         return fixup_dict({
@@ -191,6 +194,28 @@ class ZksyncComputation:
     output: bytes | None = None
     error: VMError | None = None
     children: list["ZksyncComputation"] = field(default_factory=list)
+
+    @classmethod
+    def from_trace(cls, output: dict) -> "ZksyncComputation":
+        """ Recursively constructs a ZksyncComputation from a debug_traceCall output. """
+        error = None
+        if output.get("error") is not None:
+            error = VMError(output["error"])
+        if output.get("revertReason") is not None:
+            error = Revert(output["revertReason"])
+
+        return cls(
+            msg=ZksyncMessage(
+                sender=Address(output["from"]),
+                to=Address(output["to"]),
+                gas=int(output["gas"], 16),
+                value=int(output["value"], 16),
+                data=to_bytes(output["input"]),
+            ),
+            output=to_bytes(output["output"]),
+            error=error,
+            children=[cls.from_trace(call) for call in output.get("calls", [])],
+        )
 
     @property
     def is_success(self) -> bool:

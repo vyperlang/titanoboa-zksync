@@ -5,23 +5,8 @@ from boa.contracts.abi.abi_contract import ABIContract, ABIContractFactory, ABIF
 from boa.rpc import to_bytes
 from boa.util.abi import Address
 
-from boa_zksync.types import ZksyncCompilerData
-
 
 class ZksyncDeployer(ABIContractFactory):
-    def __init__(self, compiler_data: ZksyncCompilerData, name: str, filename: str):
-        super().__init__(
-            name,
-            compiler_data.abi,
-            functions=[
-                ABIFunction(item, name)
-                for item in compiler_data.abi
-                if item.get("type") == "function"
-            ],
-            filename=filename,
-        )
-        self.compiler_data = compiler_data
-
     def deploy(self, *args, value=0, **kwargs):
         env = Env.get_singleton()
         from boa_zksync.environment import ZksyncEnv
@@ -46,8 +31,9 @@ class ZksyncDeployer(ABIContractFactory):
             address=address,
             filename=self._filename,
             env=env,
+            compiler_data=self.compiler_data,
         )
-        env.register_contract(address, self)
+        env.register_contract(address, abi_contract)
         return abi_contract
 
     def deploy_as_blueprint(self, *args, **kwargs):
@@ -59,5 +45,9 @@ class ZksyncDeployer(ABIContractFactory):
 
     @cached_property
     def constructor(self):
+        """
+        Get the constructor function of the contract.
+        :raises: StopIteration if the constructor is not found.
+        """
         ctor_abi = next(i for i in self.abi if i["type"] == "constructor")
         return ABIFunction(ctor_abi, contract_name=self._name)
