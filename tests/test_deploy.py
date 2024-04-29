@@ -1,12 +1,7 @@
-import sys
-from subprocess import Popen
-
 import boa
 import pytest
 from boa import BoaError
 from boa.contracts.base_evm_contract import StackTrace
-
-from boa_zksync.util import find_free_port, stop_subprocess, wait_url
 
 STARTING_SUPPLY = 100
 
@@ -169,3 +164,20 @@ def get_name_of(addr: HasName) -> String[32]:
             f"get_name_of(address) -> ['string'])",
         ]
     )
+
+
+def test_private(zksync_env):
+    code = """
+bar: uint256
+
+@internal
+def foo(x: uint256) -> uint256:
+    self.bar = x
+    return x
+"""
+    contract = boa.loads(code)
+    assert contract._storage.bar.get() == 0
+    assert contract.internal.foo(123) == 123
+    assert contract._storage.bar.get() == 123
+    assert contract.eval("self.bar = 456") is None
+    assert contract.eval("self.bar") == 456

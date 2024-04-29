@@ -6,9 +6,12 @@ from tempfile import TemporaryDirectory
 from boa_zksync.types import ZksyncCompilerData
 
 
-def compile_zksync(filename: str, compiler_args=None) -> ZksyncCompilerData:
+def compile_zksync(
+    contract_name: str, filename: str, compiler_args=None, source_code=None
+) -> ZksyncCompilerData:
     vyper_path = which("vyper")
     assert vyper_path, "Vyper executable not found"
+    compiler_args = compiler_args or []
     compile_result = subprocess.run(
         [
             "zkvyper",
@@ -19,7 +22,7 @@ def compile_zksync(filename: str, compiler_args=None) -> ZksyncCompilerData:
             "-f",
             "combined_json",
             # pass any extra compiler args
-            *(compiler_args or []),
+            *compiler_args,
             # pass the file name
             "--",
             filename,
@@ -29,7 +32,12 @@ def compile_zksync(filename: str, compiler_args=None) -> ZksyncCompilerData:
 
     assert compile_result.returncode == 0, compile_result.stderr.decode()
     output = json.loads(compile_result.stdout.decode())
-    return ZksyncCompilerData(**output[filename])
+    if source_code is None:
+        with open(filename) as file:
+            source_code = file.read()
+    return ZksyncCompilerData(
+        contract_name, source_code, compiler_args, **output[filename]
+    )
 
 
 def compile_zksync_source(
@@ -39,4 +47,4 @@ def compile_zksync_source(
         filename = f"{tempdir}/{name}.vy"
         with open(filename, "w") as file:
             file.write(source_code)
-        return compile_zksync(filename, compiler_args)
+        return compile_zksync(name, filename, compiler_args, source_code)

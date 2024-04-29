@@ -1,11 +1,4 @@
-import os
-import sys
-from subprocess import Popen
-
 import boa
-import pytest
-
-from boa_zksync.util import find_free_port, stop_subprocess, wait_url
 
 
 def test_dummy_contract(zksync_fork_env):

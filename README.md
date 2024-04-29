@@ -92,3 +92,6 @@ deployer.at(address) # Connect a contract to an existing address
 # Run the given source code directly
 boa.eval_zksync("source code")
 ```
+
+### Limitations
+- `# pragma optimize gas` is not supported by Zksync

@@ -1,6 +1,8 @@
 from dataclasses import dataclass, field
+from functools import cached_property
 
 import rlp
+from boa.interpret import compiler_data
 from boa.rpc import fixup_dict, to_bytes, to_hex
 from boa.util.abi import Address
 from eth.exceptions import Revert, VMError
@@ -154,12 +156,23 @@ class ZksyncCompilerData:
     Represents the output of the Zksync Vyper compiler (combined_json format).
     """
 
+    contract_name: str
+    source_code: str
+    compiler_args: list[str]
     method_identifiers: dict
-    abi: list
+    abi: list[dict]
     bytecode: str
     bytecode_runtime: str
-    warnings: list
-    factory_deps: list
+    warnings: list[str]
+    factory_deps: list[str]
+
+    @cached_property
+    def global_ctx(self):
+        return self.vyper.global_ctx
+
+    @cached_property
+    def vyper(self):
+        return compiler_data(self.source_code, self.contract_name)
 
 
 @dataclass

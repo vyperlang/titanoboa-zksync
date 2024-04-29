@@ -1,13 +1,15 @@
 from functools import cached_property
 
 from boa import Env
-from boa.contracts.abi.abi_contract import ABIContract, ABIContractFactory, ABIFunction
+from boa.contracts.abi.abi_contract import ABIContractFactory, ABIFunction
 from boa.rpc import to_bytes
 from boa.util.abi import Address
 
+from boa_zksync.contract import ZksyncContract
+
 
 class ZksyncDeployer(ABIContractFactory):
-    def deploy(self, *args, value=0, **kwargs):
+    def deploy(self, *args, value=0, **kwargs) -> ZksyncContract:
         env = Env.get_singleton()
         from boa_zksync.environment import ZksyncEnv
 
@@ -24,8 +26,31 @@ class ZksyncDeployer(ABIContractFactory):
                 else b""
             ),
         )
+        return self.at(address)
+
+    def deploy_as_blueprint(self, *args, **kwargs) -> ZksyncContract:
+        """
+        In zkSync, any contract can be used as a blueprint.
+        Note that we do need constructor arguments for this.
+        """
+        return self.deploy(*args, **kwargs)
+
+    @cached_property
+    def constructor(self) -> ABIFunction:
+        """
+        Get the constructor function of the contract.
+        :raises: StopIteration if the constructor is not found.
+        """
+        ctor_abi = next(i for i in self.abi if i["type"] == "constructor")
+        return ABIFunction(ctor_abi, contract_name=self._name)
+
+    def at(self, address: Address | str) -> ZksyncContract:
+        """
+        Create an ABI contract object for a deployed contract at `address`.
+        """
         address = Address(address)
-        abi_contract = ABIContract(
+        env = Env.get_singleton()
+        contract = ZksyncContract(
             self._name,
             self.abi,
             self._functions,
@@ -34,21 +59,5 @@ class ZksyncDeployer(ABIContractFactory):
             env=env,
             compiler_data=self.compiler_data,
         )
-        env.register_contract(address, abi_contract)
-        return abi_contract
-
-    def deploy_as_blueprint(self, *args, **kwargs):
-        """
-        In zkSync, any contract can be used as a blueprint.
-        Note that we do need constructor arguments for this.
-        """
-        return self.deploy(*args, **kwargs)
-
-    @cached_property
-    def constructor(self):
-        """
-        Get the constructor function of the contract.
-        :raises: StopIteration if the constructor is not found.
-        """
-        ctor_abi = next(i for i in self.abi if i["type"] == "constructor")
-        return ABIFunction(ctor_abi, contract_name=self._name)
+        env.register_contract(address, contract)
+        return contract

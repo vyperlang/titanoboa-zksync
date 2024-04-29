@@ -1,4 +1,3 @@
-import logging
 from contextlib import contextmanager
 from functools import cached_property
 from hashlib import sha256
@@ -9,16 +8,17 @@ from boa.contracts.abi.abi_contract import ABIContract, ABIContractFactory
 from boa.environment import _AddressType
 from boa.interpret import json
 from boa.network import NetworkEnv, _EstimateGasFailed
-from boa.rpc import RPC, EthereumRPC
+from boa.rpc import RPC, EthereumRPC, to_hex
 from boa.util.abi import Address
-from eth.constants import ZERO_ADDRESS
 from eth.exceptions import VMError
+from eth_account import Account
 
 from boa_zksync.compile import compile_zksync, compile_zksync_source
 from boa_zksync.deployer import ZksyncDeployer
 from boa_zksync.node import EraTestNode
 from boa_zksync.types import DeployTransaction, ZksyncComputation, ZksyncMessage
 
+ZERO_ADDRESS = "0x0000000000000000000000000000000000000000"
 _CONTRACT_DEPLOYER_ADDRESS = "0x0000000000000000000000000000000000008006"
 with open(Path(__file__).parent / "IContractDeployer.json") as f:
     CONTRACT_DEPLOYER = ABIContractFactory.from_abi_dict(
@@ -32,9 +32,12 @@ class ZksyncEnv(NetworkEnv):
     This is a mix-in so the logic may be reused in both network and browser modes.
     """
 
+    _DEFAULT_BALANCE = 10**20
+
     def __init__(self, rpc: str | RPC, *args, **kwargs):
         super().__init__(rpc, *args, **kwargs)
         self.evm = None  # not used in zkSync
+        self.eoa = self.generate_address("eoa")
 
     @cached_property
     def create(self):
@@ -45,12 +48,13 @@ class ZksyncEnv(NetworkEnv):
         )
 
     def _reset_fork(self, block_identifier="latest"):
-        if isinstance(self._rpc, EraTestNode):
-            rpc = self._rpc.inner_rpc
+        if isinstance(self._rpc, EraTestNode) and (inner_rpc := self._rpc.inner_rpc):
             del self._rpc
-            self._rpc = rpc
+            self._rpc = inner_rpc
 
-    def fork(self, url: str = None, reset_traces=True, block_identifier="safe", **kwargs):
+    def fork(
+        self, url: str = None, reset_traces=True, block_identifier="safe", **kwargs
+    ):
         if url:
             return super().fork(url, reset_traces, block_identifier, **kwargs)
         return self.fork_rpc(self._rpc, reset_traces, block_identifier, **kwargs)
@@ -93,6 +97,7 @@ class ZksyncEnv(NetworkEnv):
         value: int = 0,
         data: bytes = b"",
         is_modifying: bool = False,
+        override_bytecode: bytes = None,
         contract: ABIContract = None,
     ) -> Any:
         """
@@ -117,7 +122,8 @@ class ZksyncEnv(NetworkEnv):
                     traced_computation.is_error == trace.is_error
                 ), f"VMError mismatch: {traced_computation.error} != {trace.error}"
             except _EstimateGasFailed:
-                return ZksyncComputation(args, error=VMError("Estimate gas failed"))
+                if not traced_computation.is_error:  # trace gives more information
+                    return ZksyncComputation(args, error=VMError("Estimate gas failed"))
 
         return traced_computation
 
@@ -144,7 +150,10 @@ class ZksyncEnv(NetworkEnv):
         :param kwargs: Additional parameters for the transaction.
         :return: The address of the deployed contract and the bytecode hash.
         """
-        sender = str(Address(sender or self.eoa))
+        sender = self._check_sender(self._get_sender(sender))
+        if sender not in self._accounts:
+            raise ValueError(f"Account {sender} is not available.")
+
         rpc_data = self._rpc.fetch_multi(
             [
                 ("eth_getTransactionCount", [sender, "latest"]),
@@ -184,8 +193,11 @@ class ZksyncEnv(NetworkEnv):
         receipt = self._rpc.wait_for_tx_receipt(tx_hash, self.tx_settings.poll_timeout)
         return Address(receipt["contractAddress"]), bytecode
 
-    def get_code(self, address):
+    def get_code(self, address: Address) -> bytes:
         return self._rpc.fetch("eth_getCode", [address, "latest"])
+
+    def set_code(self, address: Address, bytecode: bytes):
+        return self._rpc.fetch("hardhat_setCode", [address, list(bytecode)])
 
     def create_deployer(
         self,
@@ -199,11 +211,38 @@ class ZksyncEnv(NetworkEnv):
             name = Path(filename).stem if filename else "<anonymous contract>"
 
         if filename:
-            compiler_data = compile_zksync(filename, compiler_args)
+            compiler_data = compile_zksync(name, filename, compiler_args)
         else:
             compiler_data = compile_zksync_source(source_code, name, compiler_args)
 
-        return ZksyncDeployer.from_abi_dict(compiler_data.abi, name, filename, compiler_data)
+        return ZksyncDeployer.from_abi_dict(
+            compiler_data.abi, name, filename, compiler_data
+        )
+
+    def generate_address(self, alias: Optional[str] = None) -> _AddressType:
+        """
+        Generates a new address for the zkSync environment.
+        This is different from in the base env as we need the private key to
+        sign transactions later.
+        :param alias: An alias for the address.
+        :return: The address.
+        """
+        if not hasattr(self, "_accounts"):
+            return None  # todo: this is called during initialization
+        account = Account.create(alias or f"account-{len(self._accounts)}")
+        self.add_account(account)
+
+        address = Address(account.address)
+        self.set_balance(address, self._DEFAULT_BALANCE)
+        if alias:
+            self._aliases[alias] = address
+        return address
+
+    def get_balance(self, addr: Address):
+        return self._rpc.fetch("eth_getBalance", [addr, "latest"])
+
+    def set_balance(self, addr: Address, value: int):
+        self._rpc.fetch("hardhat_setBalance", [addr, to_hex(value)])
 
 
 def _hash_code(bytecode: bytes) -> bytes:
