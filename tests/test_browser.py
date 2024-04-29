@@ -35,10 +35,10 @@ def _javascript_call(js_func: str, *args, timeout_message: str) -> Any:
 def patch_js():
     # we call MonkeyPatch directly because the default `monkeypatch` fixture has a function scope
     # this clashes with the boa plugin that tries to clean up the env after each test.
-    mpatch = MonkeyPatch()
-    mpatch.setattr("boa.integrations.jupyter.browser._javascript_call", _javascript_call)
+    patch = MonkeyPatch()
+    patch.setattr("boa.integrations.jupyter.browser._javascript_call", _javascript_call)
     yield
-    mpatch.undo()
+    patch.undo()
 
 
 @pytest.fixture

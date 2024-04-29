@@ -8,8 +8,8 @@ from boa.contracts.vyper.compiler_utils import (
     generate_source_for_arbitrary_stmt,
     detect_statement_type,
 )
+from boa.contracts.vyper.vyper_contract import VyperContract
 from boa.rpc import to_bytes
-from boa.vyper.contract import VyperContract
 from cached_property import cached_property
 from vyper.semantics.analysis.base import VarInfo
 from vyper.semantics.types.function import ContractFunctionT
