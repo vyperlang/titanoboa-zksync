@@ -2,6 +2,7 @@ from dataclasses import dataclass, field
 from functools import cached_property
 
 import rlp
+from boa.contracts.vyper.vyper_contract import VyperDeployer
 from boa.interpret import compiler_data
 from boa.rpc import fixup_dict, to_bytes, to_hex
 from boa.util.abi import Address
@@ -10,6 +11,7 @@ from eth_account import Account
 from eth_account.datastructures import SignedMessage
 from eth_account.messages import encode_typed_data
 from rlp.sedes import BigEndianInt, Binary, List
+from vyper.compiler import CompilerData
 
 _EIP712_TYPE = bytes.fromhex("71")
 _EIP712_TYPES_SPEC = {
@@ -171,8 +173,12 @@ class ZksyncCompilerData:
         return self.vyper.global_ctx
 
     @cached_property
-    def vyper(self):
-        return compiler_data(self.source_code, self.contract_name)
+    def vyper(self) -> CompilerData:
+        return compiler_data(self.source_code, self.contract_name, VyperDeployer)
+
+    @cached_property
+    def settings(self):
+        return self.vyper.settings
 
 
 @dataclass

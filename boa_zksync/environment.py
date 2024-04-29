@@ -14,8 +14,6 @@ from boa.util.abi import Address
 from eth.exceptions import VMError
 from eth_account import Account
 
-from boa_zksync.compile import compile_zksync, compile_zksync_source
-from boa_zksync.deployer import ZksyncDeployer
 from boa_zksync.node import EraTestNode
 from boa_zksync.types import DeployTransaction, ZksyncComputation, ZksyncMessage
 
@@ -201,26 +199,6 @@ class ZksyncEnv(NetworkEnv):
 
     def set_code(self, address: Address, bytecode: bytes):
         return self._rpc.fetch("hardhat_setCode", [address, list(bytecode)])
-
-    def create_deployer(
-        self,
-        source_code: str,
-        name: str = None,
-        filename: str = None,
-        dedent: bool = True,
-        compiler_args: dict = None,
-    ) -> "ZksyncDeployer":
-        if not name:
-            name = Path(filename).stem if filename else "<anonymous contract>"
-
-        if filename:
-            compiler_data = compile_zksync(name, filename, compiler_args)
-        else:
-            compiler_data = compile_zksync_source(source_code, name, compiler_args)
-
-        return ZksyncDeployer.from_abi_dict(
-            compiler_data.abi, name, filename, compiler_data
-        )
 
     def generate_address(self, alias: Optional[str] = None) -> _AddressType:
         """
