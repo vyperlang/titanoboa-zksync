@@ -1,5 +1,6 @@
 import textwrap
 from contextlib import contextmanager
+from unittest.mock import MagicMock
 
 from boa.contracts.abi.abi_contract import ABIContract, ABIFunction
 from boa.contracts.vyper.compiler_utils import (
@@ -8,6 +9,7 @@ from boa.contracts.vyper.compiler_utils import (
     detect_statement_type,
 )
 from boa.rpc import to_bytes
+from boa.vyper.contract import VyperContract
 from cached_property import cached_property
 from vyper.semantics.analysis.base import VarInfo
 from vyper.semantics.types.function import ContractFunctionT
@@ -25,7 +27,9 @@ class ZksyncContract(ABIContract):
 
     @contextmanager
     def override_vyper_namespace(self):
-        yield
+        c = VyperContract(self.compiler_data.vyper, env=self.env, override_address=self.address, skip_initcode=True, filename=self.filename)
+        with c.override_vyper_namespace():
+            yield
 
     @cached_property
     def _storage(self):

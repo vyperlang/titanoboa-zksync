@@ -1,5 +1,4 @@
 IPython
-Sphinx
 black
 flake8
 flake8-bugbear
@@ -11,4 +10,7 @@ pre-commit
 pytest
 pytest-xdist
 pytest-cov
-sphinx-rtd-theme
+
+# jupyter
+jupyter_server
+nest_asyncio

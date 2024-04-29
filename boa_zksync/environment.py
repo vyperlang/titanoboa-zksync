@@ -3,6 +3,7 @@ from functools import cached_property
 from hashlib import sha256
 from pathlib import Path
 from typing import Any, Iterable, Optional
+from unittest.mock import MagicMock
 
 from boa.contracts.abi.abi_contract import ABIContract, ABIContractFactory
 from boa.environment import _AddressType
@@ -32,12 +33,14 @@ class ZksyncEnv(NetworkEnv):
     This is a mix-in so the logic may be reused in both network and browser modes.
     """
 
-    _DEFAULT_BALANCE = 10**20
-
     def __init__(self, rpc: str | RPC, *args, **kwargs):
         super().__init__(rpc, *args, **kwargs)
         self.evm = None  # not used in zkSync
         self.eoa = self.generate_address("eoa")
+
+    @property
+    def vm(self):
+        return MagicMock()  # todo: vyper base contract is calling vm directly
 
     @cached_property
     def create(self):
@@ -233,7 +236,6 @@ class ZksyncEnv(NetworkEnv):
         self.add_account(account)
 
         address = Address(account.address)
-        self.set_balance(address, self._DEFAULT_BALANCE)
         if alias:
             self._aliases[alias] = address
         return address

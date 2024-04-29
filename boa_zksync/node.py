@@ -16,7 +16,7 @@ class EraTestNode(EthereumRPC):
         fork_at = (
             ["--fork-at", block_identifier] if isinstance(block_identifier, int) else []
         )
-        fork_args = ["--fork", rpc._rpc_url] + fork_at if rpc else ["run"]
+        fork_args = ["fork", rpc._rpc_url] + fork_at if rpc else ["run"]
         self._test_node = Popen(
             ["era_test_node", "--port", f"{port}"] + fork_args,
             stdout=sys.stdout,
