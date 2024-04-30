@@ -14,7 +14,9 @@ from boa_zksync.types import ZksyncCompilerData
 class ZksyncDeployer(ABIContractFactory):
 
     def __init__(self, compiler_data: ZksyncCompilerData, filename=None):
-        super().__init__(compiler_data.contract_name, compiler_data.abi, filename, compiler_data)
+        super().__init__(
+            compiler_data.contract_name, compiler_data.abi, filename, compiler_data
+        )
 
     @staticmethod
     def create_compiler_data(
@@ -22,7 +24,7 @@ class ZksyncDeployer(ABIContractFactory):
         contract_name: str = None,
         filename: str = None,
         compiler_args: dict = None,
-        **kwargs
+        **kwargs,
     ) -> ZksyncCompilerData:
         if not contract_name:
             contract_name = Path(filename).stem if filename else "<anonymous contract>"

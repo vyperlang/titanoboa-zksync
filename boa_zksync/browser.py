@@ -13,6 +13,7 @@ class ZksyncBrowserEnv(ZksyncEnv):
     """
     A zkSync environment for deploying contracts using a browser wallet RPC.
     """
+
     def __init__(self, address=None, *args, **kwargs):
         if colab_eval_js and not which("zkvyper"):
             logging.warning(

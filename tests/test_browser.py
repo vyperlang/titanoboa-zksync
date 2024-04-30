@@ -20,7 +20,9 @@ def _javascript_call(js_func: str, *args, timeout_message: str) -> Any:
             return None
 
         if method == "wallet_switchEthereumChain":
-            assert args[1:] == ([{"chainId": "0x1"}],), f"Bad args passed to mock: {args}"
+            assert args[1:] == (
+                [{"chainId": "0x1"}],
+            ), f"Bad args passed to mock: {args}"
             return None
 
         raise KeyError(args)

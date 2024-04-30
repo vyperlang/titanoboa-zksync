@@ -151,16 +151,18 @@ def get_name_of(addr: HasName) -> String[32]:
 
     (trace,) = ctx.value.args
     assert trace == StackTrace(
-        ["  Test an error(<CalledContract interface at "
-         f"{called_contract.address}>.name() -> ['string'])",
-         "  Test an error(<CallerContract interface at "
-         f"{caller_contract.address}>.get_name_of(address) -> "
-         "['string'])",
-         "   <Unknown contract 0x0000000000000000000000000000000000008009>",
-         "   <Unknown contract 0x0000000000000000000000000000000000008002>",
-         "  Test an error(<CallerContract interface at "
-         f"{caller_contract.address}>.get_name_of(address) -> "
-         "['string'])"]
+        [
+            "  Test an error(<CalledContract interface at "
+            f"{called_contract.address}>.name() -> ['string'])",
+            "  Test an error(<CallerContract interface at "
+            f"{caller_contract.address}>.get_name_of(address) -> "
+            "['string'])",
+            "   <Unknown contract 0x0000000000000000000000000000000000008009>",
+            "   <Unknown contract 0x0000000000000000000000000000000000008002>",
+            "  Test an error(<CallerContract interface at "
+            f"{caller_contract.address}>.get_name_of(address) -> "
+            "['string'])",
+        ]
     )
 
 

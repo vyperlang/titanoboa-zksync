@@ -1,12 +1,11 @@
 import textwrap
 from contextlib import contextmanager
-from unittest.mock import MagicMock
 
 from boa.contracts.abi.abi_contract import ABIContract, ABIFunction
 from boa.contracts.vyper.compiler_utils import (
     generate_source_for_internal_fn,
     generate_source_for_arbitrary_stmt,
-    detect_statement_type,
+    detect_expr_type,
 )
 from boa.contracts.vyper.vyper_contract import VyperContract
 from boa.rpc import to_bytes
@@ -27,13 +26,21 @@ class ZksyncContract(ABIContract):
 
     @contextmanager
     def override_vyper_namespace(self):
-        c = VyperContract(self.compiler_data.vyper, env=self.env, override_address=self.address, skip_initcode=True, filename=self.filename)
+        c = VyperContract(
+            self.compiler_data.vyper,
+            env=self.env,
+            override_address=self.address,
+            skip_initcode=True,
+            filename=self.filename,
+        )
         with c.override_vyper_namespace():
             yield
 
     @cached_property
     def _storage(self):
-        def storage(): return None
+        def storage():
+            return None
+
         for name, var in self.compiler_data.global_ctx.variables.items():
             if not var.is_immutable and not var.is_constant:
                 setattr(storage, name, ZksyncInternalVariable(var, name, self))
@@ -41,7 +48,9 @@ class ZksyncContract(ABIContract):
 
     @cached_property
     def internal(self):
-        def internal(): return None
+        def internal():
+            return None
+
         for fn in self.compiler_data.global_ctx.functions:
             typ = fn._metadata["type"]
             if typ.is_internal:
@@ -130,7 +139,7 @@ class ZksyncInternalVariable(_ZksyncInternal):
 
 class ZksyncEval(_ZksyncInternal):
     def __init__(self, code: str, contract: ZksyncContract):
-        typ = detect_statement_type(code, contract)
+        typ = detect_expr_type(code, contract)
         abi = {
             "anonymous": False,
             "inputs": [],
