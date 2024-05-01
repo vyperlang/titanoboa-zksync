@@ -9,7 +9,7 @@ classifiers = ["Topic :: Software Development"]
 
 # Requirements
 dependencies = [
-    "titanoboa@git+https://github.com/DanielSchiavini/titanoboa@zksync",
+    "titanoboa@git+https://github.com/DanielSchiavini/titanoboa@zksync-debug",
 ]
 
 [project.optional-dependencies]
