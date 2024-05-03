@@ -9,7 +9,7 @@ from boa.contracts.abi.abi_contract import ABIContract, ABIContractFactory
 from boa.environment import _AddressType
 from boa.interpret import json
 from boa.network import NetworkEnv, _EstimateGasFailed
-from boa.rpc import RPC, EthereumRPC, to_hex
+from boa.rpc import RPC, EthereumRPC, to_hex, RPCError
 from boa.util.abi import Address
 from eth.exceptions import VMError
 from eth_account import Account
@@ -114,8 +114,13 @@ class ZksyncEnv(NetworkEnv):
         sender = self._check_sender(self._get_sender(sender))
         args = ZksyncMessage(sender, to_address, gas or 0, value, data)
 
-        trace_call = self._rpc.fetch("debug_traceCall", [args.as_json_dict(), "latest"])
-        traced_computation = ZksyncComputation.from_trace(trace_call)
+        try:
+            trace_call = self._rpc.fetch("debug_traceCall", [args.as_json_dict(), "latest"])
+            traced_computation = ZksyncComputation.from_trace(trace_call)
+        except RPCError:
+            output = self._rpc.fetch("eth_call", [args.as_json_dict(), "latest"])
+            traced_computation = ZksyncComputation(args, output)
+
         if is_modifying:
             try:
                 receipt, trace = self._send_txn(**args.as_tx_params())
