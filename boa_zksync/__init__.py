@@ -16,9 +16,10 @@ def set_zksync_test_env():
 
 
 def set_zksync_fork(url):
-    boa.set_env(ZksyncEnv.from_url(url))
+    env = ZksyncEnv.from_url(url)
+    env.fork()
+    boa.set_env(env)
     boa.set_deployer_class(ZksyncDeployer)
-    boa.env.fork()
 
 
 def set_zksync_browser_env(address=None):

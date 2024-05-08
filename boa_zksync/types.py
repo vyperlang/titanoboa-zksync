@@ -217,7 +217,7 @@ class ZksyncComputation:
     children: list["ZksyncComputation"] = field(default_factory=list)
 
     @classmethod
-    def from_trace(cls, output: dict) -> "ZksyncComputation":
+    def from_call_trace(cls, output: dict) -> "ZksyncComputation":
         """Recursively constructs a ZksyncComputation from a debug_traceCall output."""
         error = None
         if output.get("error") is not None:
@@ -235,8 +235,25 @@ class ZksyncComputation:
             ),
             output=to_bytes(output["output"]),
             error=error,
-            children=[cls.from_trace(call) for call in output.get("calls", [])],
+            children=[cls.from_call_trace(call) for call in output.get("calls", [])],
         )
+
+    @classmethod
+    def from_debug_trace(cls, output: dict):
+        """
+        Finds the actual transaction computation, since zksync has system contract calls in the trace.
+        """
+        to, sender = output["to"], output["from"]
+
+        def _find(calls: list[dict]):
+            for trace in calls:
+                if found := _find(trace["calls"]):
+                    return found
+                if trace["to"] == to and trace["from"] == sender:
+                    return cls.from_call_trace(trace)
+
+        return _find(output["calls"])
+
 
     @property
     def is_success(self) -> bool:

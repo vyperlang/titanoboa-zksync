@@ -13,6 +13,7 @@ from boa.rpc import RPC, EthereumRPC, to_hex, RPCError
 from boa.util.abi import Address
 from eth.exceptions import VMError
 from eth_account import Account
+from requests import HTTPError
 
 from boa_zksync.node import EraTestNode
 from boa_zksync.types import DeployTransaction, ZksyncComputation, ZksyncMessage
@@ -115,18 +116,21 @@ class ZksyncEnv(NetworkEnv):
         args = ZksyncMessage(sender, to_address, gas or 0, value, data)
 
         try:
-            trace_call = self._rpc.fetch("debug_traceCall", [args.as_json_dict(), "latest"])
-            traced_computation = ZksyncComputation.from_trace(trace_call)
-        except RPCError:
+            trace_call = self._rpc.fetch("debug_traceCall", [args.as_json_dict(), "latest", {"tracer": "callTracer"}])
+            traced_computation = ZksyncComputation.from_call_trace(trace_call)
+        except (RPCError, HTTPError):
             output = self._rpc.fetch("eth_call", [args.as_json_dict(), "latest"])
-            traced_computation = ZksyncComputation(args, output)
+            traced_computation = ZksyncComputation(args, bytes.fromhex(output.removeprefix("0x")))
 
         if is_modifying:
             try:
                 receipt, trace = self._send_txn(**args.as_tx_params())
-                assert (
-                    traced_computation.is_error == trace.is_error
-                ), f"VMError mismatch: {traced_computation.error} != {trace.error}"
+                if trace:
+                    assert (
+                        traced_computation.is_error == trace.is_error
+                    ), f"VMError mismatch: {traced_computation.error} != {trace.error}"
+                    return ZksyncComputation.from_debug_trace(trace.raw_trace)
+
             except _EstimateGasFailed:
                 if not traced_computation.is_error:  # trace gives more information
                     return ZksyncComputation(args, error=VMError("Estimate gas failed"))
