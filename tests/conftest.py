@@ -5,6 +5,7 @@ import pytest
 from eth_account import Account
 
 import boa_zksync
+from boa_zksync import EraTestNode
 
 
 @pytest.fixture(scope="module")
@@ -29,6 +30,5 @@ def zksync_fork_env(account):
 @pytest.fixture(scope="module")
 def account():
     # default rich account from era_test_node
-    return Account.from_key(
-        "0x3d3cbc973389cb26f657686445bcc75662b415b656078503592ac8c1abb8810e"
-    )
+    _public_key, private_key = EraTestNode.TEST_ACCOUNTS[0]
+    return Account.from_key(private_key)
