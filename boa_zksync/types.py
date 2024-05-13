@@ -161,9 +161,9 @@ class ZksyncCompilerData:
     contract_name: str
     source_code: str
     compiler_args: list[str]
+    bytecode: bytes
     method_identifiers: dict
     abi: list[dict]
-    bytecode: str
     bytecode_runtime: str
     warnings: list[str]
     factory_deps: list[str]

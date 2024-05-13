@@ -51,7 +51,7 @@ class ZksyncEnv(NetworkEnv):
 
     def _reset_fork(self, block_identifier="latest"):
         if isinstance(self._rpc, EraTestNode) and (inner_rpc := self._rpc.inner_rpc):
-            del self._rpc
+            del self._rpc  # close the old rpc
             self._rpc = inner_rpc
 
     def fork(

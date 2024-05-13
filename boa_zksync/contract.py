@@ -64,11 +64,11 @@ class _ZksyncInternal(ABIFunction):
     """
 
     @cached_property
-    def _override_bytecode(self):
+    def _override_bytecode(self) -> bytes:
         data = self.contract.compiler_data
         source = "\n".join((data.source_code, self.source_code))
         compiled = compile_zksync_source(source, self.name, data.compiler_args)
-        return to_bytes(compiled.bytecode)
+        return compiled.bytecode
 
     @property
     def source_code(self):
@@ -80,7 +80,7 @@ class _ZksyncInternal(ABIFunction):
         try:
             return super().__call__(*args, **kwargs)
         finally:
-            env.set_code(self.contract.address, to_bytes(self.contract._bytecode))
+            env.set_code(self.contract.address, self.contract.compiler_data.bytecode)
 
 
 class ZksyncInternalFunction(_ZksyncInternal):
@@ -96,6 +96,7 @@ class ZksyncInternalFunction(_ZksyncInternal):
                 if fn.return_type
                 else []
             ),
+            "stateMutability": fn.mutability.value,
             "name": f"__boa_private_{fn.name}__",
             "type": "function",
         }
@@ -110,11 +111,16 @@ class ZksyncInternalFunction(_ZksyncInternal):
 
 class ZksyncInternalVariable(_ZksyncInternal):
     def __init__(self, var: VarInfo, name: str, contract: ZksyncContract):
+        inputs, output = var.typ.getter_signature
         abi = {
             "anonymous": False,
-            "inputs": [],
-            "outputs": [{"name": name, "type": var.typ.abi_type.selector_name()}],
+            "inputs": [
+                {"name": f"arg{index}", "type": arg.abi_type.selector_name()}
+                for index, arg in enumerate(inputs)
+            ],
+            "outputs": [{"name": name, "type": output.abi_type.selector_name()}],
             "name": f"__boa_private_{name}__",
+            "constant": True,
             "type": "function",
         }
         super().__init__(abi, contract._name)
@@ -122,17 +128,23 @@ class ZksyncInternalVariable(_ZksyncInternal):
         self.var = var
         self.var_name = name
 
-    def get(self):
-        return self.__call__()
+    def get(self, *args):
+        return self.__call__(*args)
 
     @cached_property
     def source_code(self):
+        args, arg_getter = "", ""
+        inputs, output = self.var.typ.getter_signature
+        if inputs:
+            arg_getter = "".join([f"[arg{i}]" for i in range(len(inputs))])
+            args = ", ".join([f"arg{i}: {arg.abi_type.selector_name()}" for i, arg in enumerate(inputs)])
+
         return textwrap.dedent(
             f"""
             @external
             @payable
-            def __boa_private_{self.var_name}__() -> {self.var.typ.abi_type.selector_name()}:
-                return self.{self.var_name}
+            def __boa_private_{self.var_name}__({args}) -> {output.abi_type.selector_name()}:
+                return self.{self.var_name}{arg_getter}
         """
         )
 

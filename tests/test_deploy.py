@@ -169,6 +169,7 @@ def get_name_of(addr: HasName) -> String[32]:
 def test_private(zksync_env):
     code = """
 bar: uint256
+map: HashMap[uint256, uint256]
 
 @internal
 def foo(x: uint256) -> uint256:
@@ -177,6 +178,7 @@ def foo(x: uint256) -> uint256:
 """
     contract = boa.loads(code)
     assert contract._storage.bar.get() == 0
+    assert contract._storage.map.get(0) == 0
     assert contract.internal.foo(123) == 123
     assert contract._storage.bar.get() == 123
     assert contract.eval("self.bar = 456") is None

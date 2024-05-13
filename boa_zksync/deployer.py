@@ -42,7 +42,7 @@ class ZksyncDeployer(ABIContractFactory):
         ), "ZksyncDeployer can only be used in zkSync environments"
 
         address, _ = env.deploy_code(
-            bytecode=to_bytes(self.compiler_data.bytecode),
+            bytecode=self.compiler_data.bytecode,
             value=value,
             constructor_calldata=(
                 self.constructor.prepare_calldata(*args, **kwargs)

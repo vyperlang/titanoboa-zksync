@@ -1,5 +1,7 @@
 import json
 import subprocess
+from os import path
+from pathlib import Path
 from shutil import which
 from tempfile import TemporaryDirectory
 
@@ -35,14 +37,30 @@ def compile_zksync(
     if source_code is None:
         with open(filename) as file:
             source_code = file.read()
+
+    kwargs = output[filename.removeprefix("./")]
+    bytecode = bytes.fromhex(kwargs.pop("bytecode").removeprefix("0x"))
     return ZksyncCompilerData(
-        contract_name, source_code, compiler_args, **output[filename]
+        contract_name, source_code, compiler_args, bytecode, **kwargs
     )
 
 
 def compile_zksync_source(
     source_code: str, name: str, compiler_args=None
 ) -> ZksyncCompilerData:
+    """
+    Compile a contract from source code.
+    :param source_code: The source code of the contract.
+    :param name: The (file)name of the contract. If this is a file name, the
+        contract name will be the file name without the extension.
+    :param compiler_args: Extra arguments to pass to the compiler.
+    :return: The compiled contract.
+    """
+    if path.exists(name):
+        # We need to accept filenames because of the way `boa.load` works
+        contract_name = Path(name).stem
+        return compile_zksync(contract_name, name, compiler_args, source_code)
+
     with TemporaryDirectory() as tempdir:
         filename = f"{tempdir}/{name}.vy"
         with open(filename, "w") as file:
