@@ -1,7 +1,7 @@
 import boa
 
 
-def test_dummy_contract(zksync_fork_env):
+def test_dummy_contract(zksync_sepolia_fork):
     code = """
 @external
 @view

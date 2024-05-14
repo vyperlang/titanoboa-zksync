@@ -8,7 +8,8 @@ from boa.contracts.vyper.compiler_utils import (
     detect_expr_type,
 )
 from boa.contracts.vyper.vyper_contract import VyperContract
-from boa.rpc import to_bytes
+from boa.rpc import to_int, to_bytes
+from boa.util.abi import Address
 from cached_property import cached_property
 from vyper.semantics.analysis.base import VarInfo
 from vyper.semantics.types.function import ContractFunctionT
@@ -26,15 +27,18 @@ class ZksyncContract(ABIContract):
 
     @contextmanager
     def override_vyper_namespace(self):
-        c = VyperContract(
+        with self.vyper_contract.override_vyper_namespace():
+            yield
+
+    @cached_property
+    def vyper_contract(self):
+        return VyperContract(
             self.compiler_data.vyper,
             env=self.env,
             override_address=self.address,
             skip_initcode=True,
             filename=self.filename,
         )
-        with c.override_vyper_namespace():
-            yield
 
     @cached_property
     def _storage(self):
@@ -57,6 +61,31 @@ class ZksyncContract(ABIContract):
                 setattr(internal, fn.name, ZksyncInternalFunction(typ, self))
         return internal
 
+    def get_logs(self):
+        receipt = self.env.last_receipt
+        if not receipt:
+            raise ValueError("No logs available")
+
+        receipt_source = Address(receipt["contractAddress"] or receipt["to"])
+        if receipt_source != self.address:
+            raise ValueError(
+                f"Logs are no longer available for {self}, "
+                f"the last called contract was {receipt_source}"
+            )
+
+        c = self.vyper_contract
+        ret = []
+        for log in receipt["logs"]:
+            address = Address(log["address"])
+            if address != self.address:
+                continue
+            index = to_int(log["logIndex"])
+            topics = [to_int(topic) for topic in log["topics"]]
+            data = to_bytes(log["data"])
+            event = (index, address.canonical_address, topics, data)
+            ret.append(c.decode_log(event))
+        return ret
+
 
 class _ZksyncInternal(ABIFunction):
     """
@@ -76,10 +105,13 @@ class _ZksyncInternal(ABIFunction):
 
     def __call__(self, *args, **kwargs):
         env = self.contract.env
+        balance_before = env.get_balance(env.eoa)
+        env.set_balance(env.eoa, 10**20)
         env.set_code(self.contract.address, self._override_bytecode)
         try:
             return super().__call__(*args, **kwargs)
         finally:
+            env.set_balance(env.eoa, balance_before)
             env.set_code(self.contract.address, self.contract.compiler_data.bytecode)
 
 
@@ -155,9 +187,9 @@ class ZksyncEval(_ZksyncInternal):
         abi = {
             "anonymous": False,
             "inputs": [],
-            "outputs": (
-                [{"name": "eval", "type": typ.abi_type.selector_name()}] if typ else []
-            ),
+            "outputs": [
+                {"name": "eval", "type": typ.abi_type.selector_name()}
+            ] if typ else [],
             "name": "__boa_debug__",
             "type": "function",
         }

@@ -3,7 +3,6 @@ from pathlib import Path
 
 from boa import Env
 from boa.contracts.abi.abi_contract import ABIContractFactory, ABIFunction
-from boa.rpc import to_bytes
 from boa.util.abi import Address
 
 from boa_zksync.compile import compile_zksync, compile_zksync_source
@@ -73,7 +72,7 @@ class ZksyncDeployer(ABIContractFactory):
     def deploy_as_blueprint(self, *args, **kwargs) -> ZksyncContract:
         """
         In zkSync, any contract can be used as a blueprint.
-        Note that we do need constructor arguments for this.
+        Note that we do need constructor arguments for deploying a blueprint.
         """
         return self.deploy(*args, **kwargs)
 

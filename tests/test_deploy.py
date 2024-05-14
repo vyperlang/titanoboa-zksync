@@ -183,3 +183,27 @@ def foo(x: uint256) -> uint256:
     assert contract._storage.bar.get() == 123
     assert contract.eval("self.bar = 456") is None
     assert contract.eval("self.bar") == 456
+
+
+def test_logs(zksync_env):
+    code = """
+event Transfer:
+    sender: indexed(address)
+    receiver: indexed(address)
+    value: uint256
+
+@external
+def __init__(supply: uint256):
+    log Transfer(empty(address), msg.sender, supply)
+
+@external
+def transfer(_to : address, _value : uint256) -> bool:
+    log Transfer(msg.sender, _to, _value)
+    return True
+"""
+    contract = boa.loads(code, 100)
+    assert [str(e) for e in contract.get_logs()] == ["Transfer(sender=0x0000000000000000000000000000000000000000, receiver=0xBC989fDe9e54cAd2aB4392Af6dF60f04873A033A, value=100)"]
+
+    to = boa.env.generate_address()
+    contract.transfer(to, 10)
+    assert [str(e) for e in contract.get_logs()] == [f"Transfer(sender={boa.env.eoa}, receiver={to}, value=10)"]

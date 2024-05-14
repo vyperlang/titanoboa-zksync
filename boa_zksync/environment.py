@@ -9,7 +9,7 @@ from boa.contracts.abi.abi_contract import ABIContract, ABIContractFactory
 from boa.environment import _AddressType
 from boa.interpret import json
 from boa.network import NetworkEnv, _EstimateGasFailed
-from boa.rpc import RPC, EthereumRPC, to_hex, RPCError
+from boa.rpc import RPC, EthereumRPC, to_hex, RPCError, to_int
 from boa.util.abi import Address
 from eth.exceptions import VMError
 from eth_account import Account
@@ -36,6 +36,7 @@ class ZksyncEnv(NetworkEnv):
         super().__init__(rpc, *args, **kwargs)
         self.evm = None  # not used in zkSync
         self.eoa = self.generate_address("eoa")
+        self.last_receipt: dict | None = None
 
     @property
     def vm(self):
@@ -125,6 +126,7 @@ class ZksyncEnv(NetworkEnv):
         if is_modifying:
             try:
                 receipt, trace = self._send_txn(**args.as_tx_params())
+                self.last_receipt = receipt
                 if trace:
                     assert (
                         traced_computation.is_error == trace.is_error
@@ -201,6 +203,7 @@ class ZksyncEnv(NetworkEnv):
 
         tx_hash = self._rpc.fetch("eth_sendRawTransaction", ["0x" + raw_tx.hex()])
         receipt = self._rpc.wait_for_tx_receipt(tx_hash, self.tx_settings.poll_timeout)
+        self.last_receipt = receipt
         return Address(receipt["contractAddress"]), bytecode
 
     def get_code(self, address: Address) -> bytes:
@@ -228,7 +231,8 @@ class ZksyncEnv(NetworkEnv):
         return address
 
     def get_balance(self, addr: Address):
-        return self._rpc.fetch("eth_getBalance", [addr, "latest"])
+        balance = self._rpc.fetch("eth_getBalance", [addr, "latest"])
+        return to_int(balance)
 
     def set_balance(self, addr: Address, value: int):
         self._rpc.fetch("hardhat_setBalance", [addr, to_hex(value)])

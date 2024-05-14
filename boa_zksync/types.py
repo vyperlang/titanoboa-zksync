@@ -215,6 +215,10 @@ class ZksyncComputation:
     output: bytes | None = None
     error: VMError | None = None
     children: list["ZksyncComputation"] = field(default_factory=list)
+    gas_used: int = 0
+    revert_reason: str = None
+    type: str = "Call"
+    value: int = 0
 
     @classmethod
     def from_call_trace(cls, output: dict) -> "ZksyncComputation":
@@ -236,6 +240,10 @@ class ZksyncComputation:
             output=to_bytes(output["output"]),
             error=error,
             children=[cls.from_call_trace(call) for call in output.get("calls", [])],
+            gas_used=int(output["gasUsed"], 16),
+            revert_reason=output.get("revertReason"),
+            type=output.get("type", "Call"),
+            value=int(output.get("value", "0x"), 16),
         )
 
     @classmethod
@@ -277,3 +285,6 @@ class ZksyncComputation:
         """
         if self.error:
             raise self.error
+
+    def get_gas_used(self):
+        return self.gas_used

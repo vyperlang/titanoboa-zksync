@@ -10,6 +10,7 @@ from boa_zksync import EraTestNode
 
 @pytest.fixture(scope="module")
 def zksync_env(account):
+    boa.interpret.disable_cache()  # todo: remove this when api is stable
     old_env = boa.env
     boa_zksync.set_zksync_test_env()
     boa.env.add_account(account, force_eoa=True)
@@ -18,7 +19,7 @@ def zksync_env(account):
 
 
 @pytest.fixture(scope="module")
-def zksync_fork_env(account):
+def zksync_sepolia_fork(account):
     old_env = boa.env
     fork_url = os.getenv("FORK_URL", "https://sepolia.era.zksync.dev")
     boa_zksync.set_zksync_fork(fork_url)
