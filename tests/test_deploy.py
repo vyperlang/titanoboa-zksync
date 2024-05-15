@@ -213,3 +213,22 @@ def transfer(_to : address, _value : uint256) -> bool:
     to = boa.env.generate_address()
     contract.transfer(to, 10)
     assert [str(e) for e in contract.get_logs()] == [f"Transfer(sender={boa.env.eoa}, receiver={to}, value=10)"]
+
+
+def test_time(zksync_env):
+    code = """
+@external
+@view
+def get_time() -> uint256:
+    return block.timestamp
+"""
+    # TODO: For some reason the RPC vs the VM timestamp is off by 1
+    contract = boa.loads(code)
+    env_timestamp = boa.env.vm.state.timestamp
+    assert contract.get_time() == env_timestamp + 1
+    boa.env.vm.state.timestamp = 1234567890
+    assert contract.get_time() == 1234567890 + 1
+
+    # sanity check
+    block = boa.env._rpc.fetch("eth_getBlockByNumber", ["latest", False])
+    assert int(block["timestamp"], 16) == env_timestamp

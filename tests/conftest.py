@@ -10,7 +10,6 @@ from boa_zksync import EraTestNode
 
 @pytest.fixture(scope="module")
 def zksync_env(account):
-    boa.interpret.disable_cache()  # todo: remove this when api is stable
     old_env = boa.env
     boa_zksync.set_zksync_test_env()
     boa.env.add_account(account, force_eoa=True)

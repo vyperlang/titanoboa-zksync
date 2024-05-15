@@ -107,8 +107,8 @@ class _ZksyncInternal(ABIFunction):
     def __call__(self, *args, **kwargs):
         env = self.contract.env
         balance_before = env.get_balance(env.eoa)
-        env.set_balance(env.eoa, 10**20)
         env.set_code(self.contract.address, self._override_bytecode)
+        env.set_balance(env.eoa, 10**20)
         try:
             return super().__call__(*args, **kwargs)
         finally:

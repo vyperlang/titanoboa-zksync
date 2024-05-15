@@ -2,7 +2,7 @@ from contextlib import contextmanager
 from functools import cached_property
 from hashlib import sha256
 from pathlib import Path
-from typing import Any, Iterable, Optional
+from typing import Any, Iterable, Optional, Type
 from unittest.mock import MagicMock
 
 from boa.contracts.abi.abi_contract import ABIContract, ABIContractFactory
@@ -37,10 +37,7 @@ class ZksyncEnv(NetworkEnv):
         self.evm = None  # not used in zkSync
         self.eoa = self.generate_address("eoa")
         self.last_receipt: dict | None = None
-
-    @property
-    def vm(self):
-        return MagicMock()  # todo: vyper base contract is calling vm directly
+        self._vm = None
 
     @cached_property
     def create(self):
@@ -50,7 +47,15 @@ class ZksyncEnv(NetworkEnv):
             if func.full_signature == "create(bytes32,bytes32,bytes)"
         )
 
+    @property
+    def vm(self):
+        if self._vm is None:
+            # todo: vyper base contract calls this property
+            self._vm = MagicMock(state=_RPCState(self._rpc))
+        return self._vm
+
     def _reset_fork(self, block_identifier="latest"):
+        self._vm = None
         if isinstance(self._rpc, EraTestNode) and (inner_rpc := self._rpc.inner_rpc):
             del self._rpc  # close the old rpc
             self._rpc = inner_rpc
@@ -77,6 +82,7 @@ class ZksyncEnv(NetworkEnv):
             self.sha3_trace: dict = {}
             self.sstore_trace: dict = {}
         self._rpc = EraTestNode(rpc, block_identifier)
+        self._reset_vm()
 
     def register_contract(self, address, obj):
         addr = Address(address)
@@ -249,3 +255,30 @@ def _hash_code(bytecode: bytes) -> bytes:
     assert bytecode_size < 2**16, "Bytecode length must be less than 2^16"
     bytecode_hash = sha256(bytecode).digest()
     return b"\x01\00" + bytecode_size.to_bytes(2, byteorder="big") + bytecode_hash[4:]
+
+
+class _RPCProperty:
+    def __init__(self, getter, setter):
+        self.getter = getter
+        self.setter = setter
+
+    def __set_name__(self, owner: Type["_RPCState"], name: str) -> None:
+        ...  # python descriptor protocol
+
+    def __get__(self, state: "_RPCState", owner):
+        if state is None:
+            return self  # static call
+        return self.getter(state.rpc)
+
+    def __set__(self, state: "_RPCState", value):
+        self.setter(state.rpc, value)
+
+
+class _RPCState:
+    timestamp = _RPCProperty(
+        lambda rpc: to_int(rpc.fetch("eth_getBlockByNumber", ["latest", False])["timestamp"]),
+        lambda rpc, value: rpc.fetch("evm_setNextBlockTimestamp", [value]),
+    )
+
+    def __init__(self, rpc):
+        self.rpc = rpc
