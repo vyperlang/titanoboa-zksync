@@ -1,3 +1,4 @@
+import os
 import socket
 from datetime import datetime, timedelta
 from subprocess import Popen, TimeoutExpired
@@ -35,3 +36,45 @@ def stop_subprocess(proc: Popen[bytes]):
     except TimeoutExpired:  # pragma: no cover
         proc.kill()
         proc.wait(timeout=1)
+
+
+def install_zkvyper_compiler(
+    source="https://raw.githubusercontent.com/matter-labs/zkvyper-bin/"
+    "66cc159d9b6af3b5616f6ed7199bd817bf42bf0a/linux-amd64/zkvyper-linux-amd64-musl-v1.4.0",
+    destination="/usr/local/bin/zkvyper",
+):
+    """
+    Downloads the zkvyper binary from the given source URL and installs it to
+    the destination directory.
+
+    This is a very basic implementation - usually users want to install the binary
+    manually, but in the Colab environment, we can automate this process.
+    """
+    response = requests.get(source)
+    with open(destination, "wb") as f:
+        f.write(response.content)
+
+    os.chmod(destination, 0o755)  # make it executable
+    assert os.system("zkvyper --version") == 0  # check if it works
+
+
+def install_era_test_node(
+    source="https://github.com/matter-labs/era-test-node/releases/download/"
+    "v0.1.0-alpha.19/era_test_node-v0.1.0-alpha.19-x86_64-unknown-linux-gnu.tar.gz",
+    destination="/usr/local/bin/era_test_node",
+):
+    """
+    Downloads the era-test-node binary from the given source URL and installs it to
+    the destination directory.
+
+    This is a very basic implementation - usually users want to install the binary
+    manually, but in the Colab environment, we can automate this process.
+    """
+    response = requests.get(source)
+    with open("era_test_node.tar.gz", "wb") as f:
+        f.write(response.content)
+
+    os.system("tar --extract --file=era_test_node.tar.gz")
+    os.system(f"mv era_test_node {destination}")
+    os.system(f"{destination} --version")
+    os.system("rm era_test_node.tar.gz")

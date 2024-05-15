@@ -170,17 +170,23 @@ def test_private(zksync_env):
     code = """
 bar: uint256
 map: HashMap[uint256, uint256]
+list: uint256[2]
 
 @internal
 def foo(x: uint256) -> uint256:
     self.bar = x
+    self.map[0] = x
+    self.list[0] = x
     return x
 """
     contract = boa.loads(code)
     assert contract._storage.bar.get() == 0
     assert contract._storage.map.get(0) == 0
+    assert contract._storage.list.get() == [0, 0]
     assert contract.internal.foo(123) == 123
     assert contract._storage.bar.get() == 123
+    assert contract._storage.map.get(0) == 123
+    assert contract._storage.list.get() == [123, 0]
     assert contract.eval("self.bar = 456") is None
     assert contract.eval("self.bar") == 456
 

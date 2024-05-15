@@ -12,6 +12,7 @@ from boa.rpc import to_int, to_bytes
 from boa.util.abi import Address
 from cached_property import cached_property
 from vyper.semantics.analysis.base import VarInfo
+from vyper.semantics.types import HashMapT
 from vyper.semantics.types.function import ContractFunctionT
 
 from boa_zksync.compile import compile_zksync_source
@@ -143,7 +144,10 @@ class ZksyncInternalFunction(_ZksyncInternal):
 
 class ZksyncInternalVariable(_ZksyncInternal):
     def __init__(self, var: VarInfo, name: str, contract: ZksyncContract):
-        inputs, output = var.typ.getter_signature
+        if isinstance(var.typ, HashMapT):
+            inputs, output = var.typ.getter_signature
+        else:
+            inputs, output = [], var.typ
         abi = {
             "anonymous": False,
             "inputs": [
@@ -165,18 +169,15 @@ class ZksyncInternalVariable(_ZksyncInternal):
 
     @cached_property
     def source_code(self):
-        args, arg_getter = "", ""
-        inputs, output = self.var.typ.getter_signature
-        if inputs:
-            arg_getter = "".join([f"[arg{i}]" for i in range(len(inputs))])
-            args = ", ".join([f"arg{i}: {arg.abi_type.selector_name()}" for i, arg in enumerate(inputs)])
-
+        inputs, output_type = self._abi["inputs"], self.return_type[0]
+        getter_call = "".join(f"[{i['name']}]" for i in inputs)
+        args_signature = ", ".join(f"{i['name']}: {i['type']}" for i in inputs)
         return textwrap.dedent(
             f"""
             @external
             @payable
-            def __boa_private_{self.var_name}__({args}) -> {output.abi_type.selector_name()}:
-                return self.{self.var_name}{arg_getter}
+            def __boa_private_{self.var_name}__({args_signature}) -> {output_type}:
+                return self.{self.var_name}{getter_call}
         """
         )
 
