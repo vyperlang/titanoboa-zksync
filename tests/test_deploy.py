@@ -222,13 +222,7 @@ def test_time(zksync_env):
 def get_time() -> uint256:
     return block.timestamp
 """
-    # TODO: For some reason the RPC vs the VM timestamp is off by 1
     contract = boa.loads(code)
-    env_timestamp = boa.env.vm.state.timestamp
-    assert contract.get_time() == env_timestamp + 1
+    assert contract.get_time() == boa.env.vm.state.timestamp
     boa.env.vm.state.timestamp = 1234567890
-    assert contract.get_time() == 1234567890 + 1
-
-    # sanity check
-    block = boa.env._rpc.fetch("eth_getBlockByNumber", ["latest", False])
-    assert int(block["timestamp"], 16) == env_timestamp
+    assert contract.get_time() == 1234567890

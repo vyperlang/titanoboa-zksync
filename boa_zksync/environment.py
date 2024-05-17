@@ -82,7 +82,6 @@ class ZksyncEnv(NetworkEnv):
             self.sha3_trace: dict = {}
             self.sstore_trace: dict = {}
         self._rpc = EraTestNode(rpc, block_identifier)
-        self._reset_vm()
 
     def register_contract(self, address, obj):
         addr = Address(address)
@@ -275,9 +274,11 @@ class _RPCProperty:
 
 
 class _RPCState:
+    # Test node adds a virtual empty block at the end of the batch.
+    # When you use the RPC - you get the timestamp of the last actually committed block.
     timestamp = _RPCProperty(
-        lambda rpc: to_int(rpc.fetch("eth_getBlockByNumber", ["latest", False])["timestamp"]),
-        lambda rpc, value: rpc.fetch("evm_setNextBlockTimestamp", [value]),
+        lambda rpc: to_int(rpc.fetch_uncached("eth_getBlockByNumber", ["pending", False])["timestamp"]) + 1,
+        lambda rpc, value: rpc.fetch_uncached("evm_setTime", [value - 1]),
     )
 
     def __init__(self, rpc):
