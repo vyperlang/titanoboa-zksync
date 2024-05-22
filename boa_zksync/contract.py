@@ -3,12 +3,12 @@ from contextlib import contextmanager
 
 from boa.contracts.abi.abi_contract import ABIContract, ABIFunction
 from boa.contracts.vyper.compiler_utils import (
-    generate_source_for_internal_fn,
-    generate_source_for_arbitrary_stmt,
     detect_expr_type,
+    generate_source_for_arbitrary_stmt,
+    generate_source_for_internal_fn,
 )
 from boa.contracts.vyper.vyper_contract import VyperContract
-from boa.rpc import to_int, to_bytes
+from boa.rpc import to_bytes, to_int
 from boa.util.abi import Address
 from cached_property import cached_property
 from vyper.semantics.analysis.base import VarInfo
@@ -188,9 +188,9 @@ class ZksyncEval(_ZksyncInternal):
         abi = {
             "anonymous": False,
             "inputs": [],
-            "outputs": [
-                {"name": "eval", "type": typ.abi_type.selector_name()}
-            ] if typ else [],
+            "outputs": (
+                [{"name": "eval", "type": typ.abi_type.selector_name()}] if typ else []
+            ),
             "name": "__boa_debug__",
             "type": "function",
         }

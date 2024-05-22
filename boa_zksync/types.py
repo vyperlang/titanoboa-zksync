@@ -216,7 +216,7 @@ class ZksyncComputation:
     error: VMError | None = None
     children: list["ZksyncComputation"] = field(default_factory=list)
     gas_used: int = 0
-    revert_reason: str = None
+    revert_reason: str | None = None
     type: str = "Call"
     value: int = 0
 
@@ -249,7 +249,8 @@ class ZksyncComputation:
     @classmethod
     def from_debug_trace(cls, output: dict):
         """
-        Finds the actual transaction computation, since zksync has system contract calls in the trace.
+        Finds the actual transaction computation, since zksync has system
+        contract calls in the trace.
         """
         to, sender = output["to"], output["from"]
 
@@ -261,7 +262,6 @@ class ZksyncComputation:
                     return cls.from_call_trace(trace)
 
         return _find(output["calls"])
-
 
     @property
     def is_success(self) -> bool:

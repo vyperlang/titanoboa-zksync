@@ -208,11 +208,16 @@ def transfer(_to : address, _value : uint256) -> bool:
     return True
 """
     contract = boa.loads(code, 100)
-    assert [str(e) for e in contract.get_logs()] == ["Transfer(sender=0x0000000000000000000000000000000000000000, receiver=0xBC989fDe9e54cAd2aB4392Af6dF60f04873A033A, value=100)"]
+    assert [str(e) for e in contract.get_logs()] == [
+        "Transfer(sender=0x0000000000000000000000000000000000000000, "
+        "receiver=0xBC989fDe9e54cAd2aB4392Af6dF60f04873A033A, value=100)"
+    ]
 
     to = boa.env.generate_address()
     contract.transfer(to, 10)
-    assert [str(e) for e in contract.get_logs()] == [f"Transfer(sender={boa.env.eoa}, receiver={to}, value=10)"]
+    assert [str(e) for e in contract.get_logs()] == [
+        f"Transfer(sender={boa.env.eoa}, receiver={to}, value=10)"
+    ]
 
 
 def test_time(zksync_env):

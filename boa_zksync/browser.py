@@ -1,13 +1,11 @@
 import logging
-import os
 from shutil import which
 
-import requests
 from boa.integrations.jupyter.browser import BrowserRPC, BrowserSigner, colab_eval_js
 from boa.rpc import EthereumRPC
 
 from boa_zksync.environment import ZksyncEnv
-from boa_zksync.util import install_zkvyper_compiler, install_era_test_node
+from boa_zksync.util import install_era_test_node, install_zkvyper_compiler
 
 
 class ZksyncBrowserEnv(ZksyncEnv):

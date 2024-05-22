@@ -9,7 +9,7 @@ from boa.contracts.abi.abi_contract import ABIContract, ABIContractFactory
 from boa.environment import _AddressType
 from boa.interpret import json
 from boa.network import NetworkEnv, _EstimateGasFailed
-from boa.rpc import RPC, EthereumRPC, to_hex, RPCError, to_int
+from boa.rpc import RPC, EthereumRPC, RPCError, to_hex, to_int
 from boa.util.abi import Address
 from eth.exceptions import VMError
 from eth_account import Account
@@ -122,11 +122,16 @@ class ZksyncEnv(NetworkEnv):
         args = ZksyncMessage(sender, to_address, gas or 0, value, data)
 
         try:
-            trace_call = self._rpc.fetch("debug_traceCall", [args.as_json_dict(), "latest", {"tracer": "callTracer"}])
+            trace_call = self._rpc.fetch(
+                "debug_traceCall",
+                [args.as_json_dict(), "latest", {"tracer": "callTracer"}],
+            )
             traced_computation = ZksyncComputation.from_call_trace(trace_call)
         except (RPCError, HTTPError):
             output = self._rpc.fetch("eth_call", [args.as_json_dict(), "latest"])
-            traced_computation = ZksyncComputation(args, bytes.fromhex(output.removeprefix("0x")))
+            traced_computation = ZksyncComputation(
+                args, bytes.fromhex(output.removeprefix("0x"))
+            )
 
         if is_modifying:
             try:
@@ -261,8 +266,9 @@ class _RPCProperty:
         self.getter = getter
         self.setter = setter
 
-    def __set_name__(self, owner: Type["_RPCState"], name: str) -> None:
-        ...  # python descriptor protocol
+    def __set_name__(
+        self, owner: Type["_RPCState"], name: str
+    ) -> None: ...  # python descriptor protocol
 
     def __get__(self, state: "_RPCState", owner):
         if state is None:
@@ -277,7 +283,10 @@ class _RPCState:
     # Test node adds a virtual empty block at the end of the batch.
     # When you use the RPC - you get the timestamp of the last actually committed block.
     timestamp = _RPCProperty(
-        lambda rpc: to_int(rpc.fetch_uncached("eth_getBlockByNumber", ["pending", False])["timestamp"]) + 1,
+        lambda rpc: to_int(
+            rpc.fetch_uncached("eth_getBlockByNumber", ["pending", False])["timestamp"]
+        )
+        + 1,
         lambda rpc, value: rpc.fetch_uncached("evm_setTime", [value - 1]),
     )
 
