@@ -53,14 +53,18 @@ class EraTestNode(EthereumRPC):
         ),
     ]
 
-    def __init__(self, rpc: Optional[EthereumRPC] = None, block_identifier="safe"):
-        self.inner_rpc = rpc
+    def __init__(
+        self, inner_rpc: Optional[EthereumRPC] = None, block_identifier="safe"
+    ):
+        self.inner_rpc = inner_rpc
 
         port = find_free_port()
         fork_at = (
-            ["--fork-at", block_identifier] if isinstance(block_identifier, int) else []
+            ["--fork-at", f"{block_identifier}"]
+            if isinstance(block_identifier, int)
+            else []
         )
-        fork_args = ["fork", rpc._rpc_url] + fork_at if rpc else ["run"]
+        fork_args = ["fork", inner_rpc._rpc_url] + fork_at if inner_rpc else ["run"]
         self._test_node = Popen(
             ["era_test_node", "--port", f"{port}"] + fork_args,
             stdout=sys.stdout,

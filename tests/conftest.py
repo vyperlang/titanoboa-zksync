@@ -21,7 +21,7 @@ def zksync_env(account):
 def zksync_sepolia_fork(account):
     old_env = boa.env
     fork_url = os.getenv("FORK_URL", "https://sepolia.era.zksync.dev")
-    boa_zksync.set_zksync_fork(fork_url)
+    boa_zksync.set_zksync_fork(fork_url, block_identifier=1689570)
     boa.env.add_account(account, force_eoa=True)
     yield boa.env
     boa.set_env(old_env)

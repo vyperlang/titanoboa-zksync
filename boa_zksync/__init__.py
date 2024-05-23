@@ -15,18 +15,18 @@ def set_zksync_test_env():
     boa.set_deployer_class(ZksyncDeployer)
 
 
-def set_zksync_fork(url):
+def set_zksync_fork(url, *args, **kwargs):
     env = ZksyncEnv.from_url(url)
-    env.fork()
+    env.fork(*args, **kwargs)
     boa.set_env(env)
     boa.set_deployer_class(ZksyncDeployer)
 
 
-def set_zksync_browser_env(address=None):
+def set_zksync_browser_env(*args, **kwargs):
     # import locally because jupyter is generally not installed
     from boa_zksync.browser import ZksyncBrowserEnv
 
-    boa.set_env(ZksyncBrowserEnv(address))
+    boa.set_env(ZksyncBrowserEnv(*args, **kwargs))
     boa.set_deployer_class(ZksyncDeployer)
 
 
