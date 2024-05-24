@@ -54,7 +54,10 @@ class EraTestNode(EthereumRPC):
     ]
 
     def __init__(
-        self, inner_rpc: Optional[EthereumRPC] = None, block_identifier="safe"
+        self,
+        inner_rpc: Optional[EthereumRPC] = None,
+        block_identifier="safe",
+        node_args=(),
     ):
         self.inner_rpc = inner_rpc
 
@@ -64,9 +67,9 @@ class EraTestNode(EthereumRPC):
             if isinstance(block_identifier, int)
             else []
         )
-        fork_args = ["fork", inner_rpc._rpc_url] + fork_at if inner_rpc else ["run"]
+        command = ["fork", inner_rpc._rpc_url] + fork_at if inner_rpc else ["run"]
         self._test_node = Popen(
-            ["era_test_node", "--port", f"{port}"] + fork_args,
+            ["era_test_node", "--port", f"{port}"] + list(node_args) + command,
             stdout=sys.stdout,
             stderr=sys.stderr,
         )

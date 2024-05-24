@@ -10,8 +10,8 @@ def set_zksync_env(url):
     boa.set_deployer_class(ZksyncDeployer)
 
 
-def set_zksync_test_env():
-    boa.set_env(ZksyncEnv(rpc=EraTestNode()))
+def set_zksync_test_env(node_args=()):
+    boa.set_env(ZksyncEnv(rpc=EraTestNode(node_args=node_args)))
     boa.set_deployer_class(ZksyncDeployer)
 
 
