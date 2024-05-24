@@ -20,47 +20,29 @@ pip install git+https://github.com/DanielSchiavini/titanoboa-zksync.git@main
 ## Usage
 The usage of this plugin is similar to the original [Titanoboa interpreter](https://github.com/vyperlang/titanoboa).
 
-Note that the boa_zksync plugin must be imported to install the hooks in the `boa` object.
-The same functions are also available in the `boa_zksync` module.
-
-
 ### Configuring the environment
 #### In Python:
-```python
-import boa, boa_zksync
 
-boa.set_zksync_env("<rpc-url>")
+```python
+import boa_zksync
+
+boa_zksync.set_zksync_env("<rpc_url>")  # use RPC
+boa_zksync.set_zksync_fork("<rpc_url>")  # fork from the mainnet
+boa_zksync.set_zksync_test_env()  # run a local test node
 ```
 
 #### In JupyterLab or Google Colab:
 ```python
 import boa, boa_zksync
+from boa.integrations.jupyter import BrowserSigner
 
-boa.set_zksync_browser_env()
+# use the browser signer and RPC:
+boa_zksync.set_zksync_browser_env()  # use the browser signer and RPC
 boa.env.set_chain_id(324)  # Set the chain ID to the ZkSync network
-```
 
-Some cell magic is also provided after the extension is loaded:
-```jupyter
-%load_ext boa_zksync.ipython
-```
-
-Instead of `loads_zksync_partial` you can use:
-```jupyter
-%zkvyper ContractName
-# put your source code here, a deployer object with this name is created.
-```
-
-Instead of `load_zksync` you can then use:
-```jupyter
-%zkcontract
-# put your source code here, a contract will be deployed to ZkSync
-```
-
-Instead of `eval_zksync` you can use:
-```jupyter
-%zkeval
-# put some code to be evaluated here
+# use the browser signer and a custom RPC:
+boa_zksync.set_zksync_env("<rpc_url>")
+boa.env.set_eoa(BrowserSigner())
 ```
 
 ### Interacting with the network
@@ -70,27 +52,29 @@ import boa, boa_zksync
 
 constructor_args, address = [], "0x1234..."
 
+boa_zksync.set_zksync_test_env()  # configure the environment, see previous section
+
 # Compile a contract from source file
-boa.compile_zksync("path/to/contract.vy")
+boa_zksync.ZksyncDeployer.create_compiler_data("source code")
 
 # Load a contract from source code and deploy
-boa.loads_zksync("contract source code", *constructor_args)
+boa.loads("contract source code", *constructor_args)
 
 # Load a contract from file and deploy
-contract = boa.load_zksync("path/to/contract.vy", *constructor_args)
+contract = boa.load("path/to/contract.vy", *constructor_args)
 
 # Load a contract from source file but don't deploy yet
-deployer = boa.load_zksync_partial("source code")
+deployer = boa.loads_partial("source code")
 deployer.deploy(*constructor_args)  # Deploy the contract
 deployer.at(address) # Connect a contract to an existing address
 
 # Load a contract from source file but don't deploy yet
-deployer = boa.loads_zksync_partial("source code")
+deployer = boa.loads_partial("source code")
 deployer.deploy(*constructor_args)  # Deploy the contract
 deployer.at(address) # Connect a contract to an existing address
 
 # Run the given source code directly
-boa.eval_zksync("source code")
+boa.eval("source code")
 ```
 
 ### Limitations
