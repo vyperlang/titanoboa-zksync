@@ -1,8 +1,5 @@
-name: unitary
-
 on:
-  pull_request:
-  push:  # all
+  push:
 
 jobs:
   unitary:
