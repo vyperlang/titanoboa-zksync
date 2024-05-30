@@ -6,7 +6,7 @@ A Zksync plugin for the Titanoboa Vyper interpreter
 
 First install the following dependencies, depending on your system:
 
-- [era-compiler-vyper]() a.k.a. `zkvyper`: to compile Vyper code to ZkSync-compatible bytecode.
+- [era-compiler-vyper](https://github.com/matter-labs/era-compiler-vyper) a.k.a. `zkvyper`: to compile Vyper code to ZkSync-compatible bytecode.
 - [era-test-node]( https://github.com/matter-labs/era-test-node/releases) for testing and forking. 
 
 For Google Colab: These dependencies should be downloaded automatically.
