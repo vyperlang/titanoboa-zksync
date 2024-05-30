@@ -35,7 +35,6 @@ class ZksyncEnv(NetworkEnv):
     def __init__(self, rpc: str | RPC, *args, **kwargs):
         super().__init__(rpc, *args, **kwargs)
         self.evm = None  # not used in zkSync
-        self.eoa = self.generate_address("eoa")
         self.last_receipt: dict | None = None
         self._vm = None
 
@@ -212,8 +211,11 @@ class ZksyncEnv(NetworkEnv):
         raw_tx = tx.rlp_encode(signature, estimated_gas)
 
         tx_hash = self._rpc.fetch("eth_sendRawTransaction", ["0x" + raw_tx.hex()])
+        print(f"tx broadcasted: {tx_hash}")
         receipt = self._rpc.wait_for_tx_receipt(tx_hash, self.tx_settings.poll_timeout)
         self.last_receipt = receipt
+
+        print(f"{tx_hash} mined in block {receipt['blockHash']}!")
         return Address(receipt["contractAddress"]), bytecode
 
     def get_code(self, address: Address) -> bytes:
