@@ -2,7 +2,7 @@ import textwrap
 from contextlib import contextmanager
 
 from boa.contracts.abi.abi_contract import ABIContract, ABIFunction
-from boa.contracts.vyper.compiler_utils import (
+from boa_zksync.compiler_utils import (
     detect_expr_type,
     generate_source_for_arbitrary_stmt,
     generate_source_for_internal_fn,
