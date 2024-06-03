@@ -62,7 +62,7 @@ class ZksyncDeployer(ABIContractFactory):
             self.abi,
             self._functions,
             address=address,
-            filename=self._filename,
+            filename=self.filename,
             env=env,
             compiler_data=self.compiler_data,
         )
