@@ -2,11 +2,6 @@ import textwrap
 from contextlib import contextmanager
 
 from boa.contracts.abi.abi_contract import ABIContract, ABIFunction
-from boa_zksync.compiler_utils import (
-    detect_expr_type,
-    generate_source_for_arbitrary_stmt,
-    generate_source_for_internal_fn,
-)
 from boa.contracts.vyper.vyper_contract import VyperContract
 from boa.rpc import to_bytes, to_int
 from boa.util.abi import Address
@@ -16,6 +11,11 @@ from vyper.semantics.types import HashMapT
 from vyper.semantics.types.function import ContractFunctionT
 
 from boa_zksync.compile import compile_zksync_source
+from boa_zksync.compiler_utils import (
+    detect_expr_type,
+    generate_source_for_arbitrary_stmt,
+    generate_source_for_internal_fn,
+)
 
 
 class ZksyncContract(ABIContract):

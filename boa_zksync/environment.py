@@ -173,7 +173,12 @@ class ZksyncEnv(NetworkEnv):
         """
         sender = self._check_sender(self._get_sender(sender))
         if sender not in self._accounts:
-            raise ValueError(f"Account {sender} is not available.")
+            tip = (
+                f"Known accounts: {list(self._accounts)}"
+                if self._accounts
+                else "Did you forget to call `add_account`?"
+            )
+            raise ValueError(f"Account {sender} is not available. ${tip}")
 
         rpc_data = self._rpc.fetch_multi(
             [
