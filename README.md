@@ -6,12 +6,38 @@ A Zksync plugin for the Titanoboa Vyper interpreter
 
 First install the following dependencies, depending on your system:
 
-- [era-compiler-vyper](https://github.com/matter-labs/era-compiler-vyper) a.k.a. `zkvyper`: to compile Vyper code to ZkSync-compatible bytecode.
-- [era-test-node]( https://github.com/matter-labs/era-test-node/releases) for testing and forking. 
+#### Google Colab
+For Google Colab: The following dependencies should be downloaded automatically.
 
-For Google Colab: These dependencies should be downloaded automatically.
+#### Zkvyper Compiler
+We use the [era-compiler-vyper](https://github.com/matter-labs/era-compiler-vyper) a.k.a. `zkvyper`: to compile Vyper code to ZkSync-compatible bytecode.
 
-Then, install the package:
+1. Download the binary from the [zkvyper-bin repository](https://github.com/matter-labs/zkvyper-bin).
+ 
+2. On Linux/macOS, mark the binary as executable:
+`chmod a+x <path to file>`
+
+3. On macOS, the binary may need to have its quarantine attribute cleared: 
+`xattr -d com.apple.quarantine <path to file>`
+
+Then, make sure this is available in your system PATH.
+
+#### ZkSync Node
+
+If you want to test with forks or a local test node, you will need to install the ZkSync [era-test-node](https://github.com/matter-labs/era-test-node/releases).
+
+1. Download `era-test-node` from latest [Release](https://github.com/matter-labs/era-test-node/releases/latest)
+
+2. Extract the binary and mark as executable:
+   ```bash
+   tar xz -f era_test_node.tar.gz -C /usr/local/bin/
+   chmod +x /usr/local/bin/era_test_node
+   ```
+
+Then, make sure this is available in your system PATH.
+
+#### Install the plugin
+Finally, install the package:
 
 ```bash
 pip install git+https://github.com/DanielSchiavini/titanoboa-zksync.git@main
