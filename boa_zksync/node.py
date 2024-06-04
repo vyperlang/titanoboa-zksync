@@ -68,11 +68,8 @@ class EraTestNode(EthereumRPC):
             else []
         )
         command = ["fork", inner_rpc._rpc_url] + fork_at if inner_rpc else ["run"]
-        self._test_node = Popen(
-            ["era_test_node", "--port", f"{port}"] + list(node_args) + command,
-            stdout=sys.stdout,
-            stderr=sys.stderr,
-        )
+        args = ["era_test_node"] + list(node_args) + ["--port", f"{port}"] + command
+        self._test_node = Popen(args, stdout=sys.stdout, stderr=sys.stderr)
 
         super().__init__(f"http://localhost:{port}")
         logging.info(f"Started fork node at {self._rpc_url}")

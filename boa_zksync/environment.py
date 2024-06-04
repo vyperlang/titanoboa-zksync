@@ -55,7 +55,7 @@ class ZksyncEnv(NetworkEnv):
 
     def _reset_fork(self, block_identifier="latest"):
         self._vm = None
-        if isinstance(self._rpc, EraTestNode) and (inner_rpc := self._rpc.inner_rpc):
+        if block_identifier == "latest" and isinstance(self._rpc, EraTestNode) and (inner_rpc := self._rpc.inner_rpc):
             del self._rpc  # close the old rpc
             self._rpc = inner_rpc
 
@@ -80,7 +80,7 @@ class ZksyncEnv(NetworkEnv):
         if reset_traces:
             self.sha3_trace: dict = {}
             self.sstore_trace: dict = {}
-        self._rpc = EraTestNode(rpc, block_identifier)
+        self._rpc = EraTestNode(rpc, block_identifier, **kwargs)
 
     def register_contract(self, address, obj):
         addr = Address(address)
