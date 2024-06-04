@@ -18,8 +18,8 @@ from requests import HTTPError
 from boa_zksync.node import EraTestNode
 from boa_zksync.types import DeployTransaction, ZksyncComputation, ZksyncMessage
 
-ZERO_ADDRESS = "0x0000000000000000000000000000000000000000"
-_CONTRACT_DEPLOYER_ADDRESS = "0x0000000000000000000000000000000000008006"
+ZERO_ADDRESS = Address("0x0000000000000000000000000000000000000000")
+_CONTRACT_DEPLOYER_ADDRESS = Address("0x0000000000000000000000000000000000008006")
 with open(Path(__file__).parent / "IContractDeployer.json") as f:
     CONTRACT_DEPLOYER = ABIContractFactory.from_abi_dict(
         json.load(f), "ContractDeployer"
@@ -55,7 +55,11 @@ class ZksyncEnv(NetworkEnv):
 
     def _reset_fork(self, block_identifier="latest"):
         self._vm = None
-        if block_identifier == "latest" and isinstance(self._rpc, EraTestNode) and (inner_rpc := self._rpc.inner_rpc):
+        if (
+            block_identifier == "latest"
+            and isinstance(self._rpc, EraTestNode)
+            and (inner_rpc := self._rpc.inner_rpc)
+        ):
             del self._rpc  # close the old rpc
             self._rpc = inner_rpc
 
@@ -120,33 +124,22 @@ class ZksyncEnv(NetworkEnv):
         sender = self._check_sender(self._get_sender(sender))
         args = ZksyncMessage(sender, to_address, gas or 0, value, data)
 
-        try:
-            trace_call = self._rpc.fetch(
-                "debug_traceCall",
-                [args.as_json_dict(), "latest", {"tracer": "callTracer"}],
-            )
-            traced_computation = ZksyncComputation.from_call_trace(trace_call)
-        except (RPCError, HTTPError):
-            output = self._rpc.fetch("eth_call", [args.as_json_dict(), "latest"])
-            traced_computation = ZksyncComputation(
-                args, bytes.fromhex(output.removeprefix("0x"))
-            )
-
+        computation = self._compute(args)
         if is_modifying:
             try:
                 receipt, trace = self._send_txn(**args.as_tx_params())
                 self.last_receipt = receipt
                 if trace:
                     assert (
-                        traced_computation.is_error == trace.is_error
-                    ), f"VMError mismatch: {traced_computation.error} != {trace.error}"
+                        computation.is_error == trace.is_error
+                    ), f"VMError mismatch: {computation.error} != {trace.error}"
                     return ZksyncComputation.from_debug_trace(trace.raw_trace)
 
             except _EstimateGasFailed:
-                if not traced_computation.is_error:  # trace gives more information
+                if not computation.is_error:  # trace gives more information
                     return ZksyncComputation(args, error=VMError("Estimate gas failed"))
 
-        return traced_computation
+        return computation
 
     def deploy_code(
         self,
@@ -209,9 +202,7 @@ class ZksyncEnv(NetworkEnv):
             paymaster_params=kwargs.pop("paymaster_params", None),
         )
 
-        estimated_gas = self._rpc.fetch("eth_estimateGas", [tx.get_estimate_tx()])
-        estimated_gas = int(estimated_gas, 16)
-
+        estimated_gas = self._estimate_gas(tx)
         signature = tx.sign_typed_data(self._accounts[sender], estimated_gas)
         raw_tx = tx.rlp_encode(signature, estimated_gas)
 
@@ -253,6 +244,30 @@ class ZksyncEnv(NetworkEnv):
 
     def set_balance(self, addr: Address, value: int):
         self._rpc.fetch("hardhat_setBalance", [addr, to_hex(value)])
+
+    def _estimate_gas(self, tx: DeployTransaction) -> int:
+        estimate_msg = tx.get_estimate_msg()
+        try:
+            estimated_gas = self._rpc.fetch(
+                "eth_estimateGas", [estimate_msg.as_json_dict()]
+            )
+            return int(estimated_gas, 16)
+        except RPCError as e:
+            compute = self._compute(tx.get_estimate_msg())
+            if compute.is_error:
+                raise compute.error
+            raise _EstimateGasFailed(e) from e
+
+    def _compute(self, args: ZksyncMessage):
+        try:
+            trace_call = self._rpc.fetch(
+                "debug_traceCall",
+                [args.as_json_dict(), "latest", {"tracer": "callTracer"}],
+            )
+            return ZksyncComputation.from_call_trace(trace_call)
+        except (RPCError, HTTPError):
+            output = self._rpc.fetch("eth_call", [args.as_json_dict(), "latest"])
+            return ZksyncComputation(args, bytes.fromhex(output.removeprefix("0x")))
 
 
 def _hash_code(bytecode: bytes) -> bytes:

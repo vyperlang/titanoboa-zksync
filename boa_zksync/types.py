@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
 from functools import cached_property
+from typing import Optional
 
 import rlp
 from boa.contracts.vyper.vyper_contract import VyperDeployer
@@ -51,8 +52,8 @@ class DeployTransaction:
     Represents a transaction context for a zkSync deployment transaction.
     """
 
-    sender: str
-    to: str
+    sender: Address
+    to: Address
     gas: int
     gas_price: int
     max_priority_fee_per_gas: int
@@ -66,26 +67,21 @@ class DeployTransaction:
     chain_id: int
     paymaster_params: tuple[int, bytes] | None
 
-    def get_estimate_tx(self):
+    def get_estimate_msg(self) -> "ZksyncMessage":
         bytecodes = [self.bytecode] + self.dependency_bytecodes
-        return {
-            "transactionType": f"0x{_EIP712_TYPE.hex()}",
-            "chain_id": self.chain_id,
-            "from": self.sender,
-            "to": self.to,
-            "gas": f"0x{self.gas:0x}",
-            "gasPrice": f"0x{self.gas_price:0x}",
-            "maxPriorityFeePerGas": f"0x{self.max_priority_fee_per_gas :0x}",
-            "nonce": f"0x{self.nonce:0x}",
-            "value": f"0x{self.value:0x}",
-            "data": f"0x{self.calldata.hex()}",
-            "eip712Meta": {
-                "gasPerPubdata": f"0x{_GAS_PER_PUB_DATA_DEFAULT:0x}",
-                "factoryDeps": [
-                    [int(byte) for byte in bytecode] for bytecode in bytecodes
-                ],
-            },
-        }
+        return ZksyncMessage(
+            transaction_type=_EIP712_TYPE,
+            chain_id=self.chain_id,
+            sender=self.sender,
+            to=self.to,
+            gas=self.gas,
+            gas_price=self.gas_price,
+            max_priority_fee_per_gas=self.max_priority_fee_per_gas,
+            nonce=self.nonce,
+            value=self.value,
+            data=self.calldata,
+            factory_deps=bytecodes,
+        )
 
     def sign_typed_data(
         self, account: Account, estimated_gas: int
@@ -175,7 +171,9 @@ class ZksyncCompilerData:
 
     @cached_property
     def vyper(self) -> CompilerData:
-        return compiler_data(self.source_code, self.contract_name, VyperDeployer, settings=self.settings)
+        return compiler_data(
+            self.source_code, self.contract_name, VyperDeployer, settings=self.settings
+        )
 
     @cached_property
     def settings(self):
@@ -189,6 +187,12 @@ class ZksyncMessage:
     gas: int
     value: int
     data: bytes
+    transaction_type: Optional[bytes] = None
+    chain_id: Optional[int] = None
+    gas_price: Optional[int] = None
+    max_priority_fee_per_gas: Optional[int] = None
+    nonce: Optional[int] = None
+    factory_deps: Optional[list[bytes]] = None
 
     @property
     def code_address(self) -> bytes:
@@ -196,15 +200,34 @@ class ZksyncMessage:
         return to_bytes(self.to)
 
     def as_json_dict(self, sender_field="from"):
-        return fixup_dict(
-            {
-                sender_field: self.sender,
-                "to": self.to,
-                "gas": self.gas,
-                "value": self.value,
-                "data": to_hex(self.data),
+        def to_hex_optional(value):
+            return None if value is None else to_hex(value)
+
+        args = {
+            sender_field: str(self.sender),
+            "to": str(self.to),
+            "gas": self.gas,
+            "value": self.value,
+            "data": self.data,
+            "transactionType": self.transaction_type,
+            "chain_id": self.chain_id,
+            "gasPrice": self.gas_price,
+            "maxPriorityFeePerGas": self.max_priority_fee_per_gas,
+            "nonce": self.nonce,
+        }
+        meta = (
+            {}
+            if self.factory_deps is None
+            else {
+                "eip712Meta": {
+                    "gasPerPubdata": f"0x{_GAS_PER_PUB_DATA_DEFAULT:0x}",
+                    "factoryDeps": [
+                        [int(byte) for byte in dep] for dep in self.factory_deps
+                    ],
+                }
             }
         )
+        return {**fixup_dict(args), **meta}
 
     def as_tx_params(self):
         return self.as_json_dict(sender_field="from_")

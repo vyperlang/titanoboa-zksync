@@ -30,7 +30,7 @@ def set_implementation(_implementation: address):
     """
     c = boa.loads(code)
     assert c.implementation() == ZERO_ADDRESS
-    boa.env.set_balance(boa.env.eoa, 10 ** 20)
+    boa.env.set_balance(boa.env.eoa, 10**20)
     c.set_implementation(c.address)
     assert c.implementation() == c.address
 

@@ -3,6 +3,8 @@ import pytest
 from boa import BoaError
 from boa.contracts.base_evm_contract import StackTrace
 
+from boa_zksync.environment import ZERO_ADDRESS
+
 STARTING_SUPPLY = 100
 
 
@@ -16,6 +18,7 @@ balances: HashMap[address, uint256]
 def __init__(t: uint256):
     self.totalSupply = t
     self.balances[self] = t
+    assert self.totalSupply > 0
 
 @external
 def update_total_supply(t: uint16) -> uint256:
@@ -33,6 +36,20 @@ def test_total_supply(simple_contract):
     assert simple_contract.totalSupply() == STARTING_SUPPLY
     simple_contract.update_total_supply(STARTING_SUPPLY * 2)
     assert simple_contract.totalSupply() == STARTING_SUPPLY * 3
+
+
+def test_constructor_reverts(simple_contract):
+    code = """
+interface HasName:
+    def name() -> String[32]: view
+
+@external
+def __init__(impl: HasName):
+    assert impl.name() == "crvUSD"
+"""
+    with pytest.raises(BoaError) as ctx:
+        boa.loads(code, ZERO_ADDRESS, name="ConstructorRevert")
+    assert ctx.value.args == ("Revert(b'assert impl.name() == \"crvUSD\"')",)
 
 
 def test_blueprint(zksync_env):
