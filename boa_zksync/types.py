@@ -5,7 +5,7 @@ from typing import Optional
 import rlp
 from boa.contracts.vyper.vyper_contract import VyperDeployer
 from boa.interpret import compiler_data
-from boa.rpc import fixup_dict, to_bytes, to_hex
+from boa.rpc import fixup_dict, to_bytes
 from boa.util.abi import Address
 from eth.exceptions import Revert, VMError
 from eth_account import Account
@@ -200,16 +200,13 @@ class ZksyncMessage:
         return to_bytes(self.to)
 
     def as_json_dict(self, sender_field="from"):
-        def to_hex_optional(value):
-            return None if value is None else to_hex(value)
-
         args = {
             sender_field: str(self.sender),
             "to": str(self.to),
             "gas": self.gas,
             "value": self.value,
             "data": self.data,
-            "transactionType": self.transaction_type,
+            "type": self.transaction_type,
             "chain_id": self.chain_id,
             "gasPrice": self.gas_price,
             "maxPriorityFeePerGas": self.max_priority_fee_per_gas,

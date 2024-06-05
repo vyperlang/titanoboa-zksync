@@ -5,7 +5,7 @@ import pytest
 from _pytest.monkeypatch import MonkeyPatch
 
 from boa_zksync import set_zksync_browser_env
-from boa_zksync.environment import ZERO_ADDRESS
+from boa_zksync.util import ZERO_ADDRESS
 
 
 def _javascript_call(js_func: str, *args, timeout_message: str) -> Any:

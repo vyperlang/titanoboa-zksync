@@ -1,13 +1,15 @@
 from functools import cached_property
 from pathlib import Path
 
-from boa import Env
+from boa import Env, BoaError
 from boa.contracts.abi.abi_contract import ABIContractFactory, ABIFunction
+from boa.network import _EstimateGasFailed
 from boa.util.abi import Address
 
 from boa_zksync.compile import compile_zksync, compile_zksync_source
 from boa_zksync.contract import ZksyncContract
-from boa_zksync.types import ZksyncCompilerData
+from boa_zksync.util import ZERO_ADDRESS
+from boa_zksync.types import ZksyncCompilerData, ZksyncComputation
 
 
 class ZksyncDeployer(ABIContractFactory):
@@ -40,16 +42,23 @@ class ZksyncDeployer(ABIContractFactory):
             env, ZksyncEnv
         ), "ZksyncDeployer can only be used in zkSync environments"
 
-        address, _ = env.deploy_code(
-            bytecode=self.compiler_data.bytecode,
-            value=value,
-            constructor_calldata=(
-                self.constructor.prepare_calldata(*args, **kwargs)
-                if args or kwargs
-                else b""
-            ),
-        )
-        return self.at(address)
+        try:
+            address, _ = env.deploy_code(
+                bytecode=self.compiler_data.bytecode,
+                value=value,
+                constructor_calldata=(
+                    self.constructor.prepare_calldata(*args, **kwargs)
+                    if args or kwargs
+                    else b""
+                ),
+            )
+            return self.at(address)
+        except _EstimateGasFailed as e:
+            if isinstance(e.args[0], ZksyncComputation):
+                c = self._create_contract(env, ZERO_ADDRESS)
+                trace = c.stack_trace(e.args[0])
+                raise BoaError(trace) from e
+            raise e from e
 
     def at(self, address: Address | str) -> ZksyncContract:
         """
@@ -57,6 +66,11 @@ class ZksyncDeployer(ABIContractFactory):
         """
         address = Address(address)
         env = Env.get_singleton()
+        contract = self._create_contract(env, address)
+        env.register_contract(address, contract)
+        return contract
+
+    def _create_contract(self, env, address):
         contract = ZksyncContract(
             self._name,
             self.abi,
@@ -66,7 +80,6 @@ class ZksyncDeployer(ABIContractFactory):
             env=env,
             compiler_data=self.compiler_data,
         )
-        env.register_contract(address, contract)
         return contract
 
     def deploy_as_blueprint(self, *args, **kwargs) -> ZksyncContract:

@@ -3,7 +3,7 @@ import pytest
 from boa import BoaError
 from boa.contracts.base_evm_contract import StackTrace
 
-from boa_zksync.environment import ZERO_ADDRESS
+from boa_zksync.util import ZERO_ADDRESS
 
 STARTING_SUPPLY = 100
 
@@ -45,11 +45,10 @@ interface HasName:
 
 @external
 def __init__(impl: HasName):
-    assert impl.name() == "crvUSD"
+    assert impl.name() == "USD"
 """
-    with pytest.raises(BoaError) as ctx:
+    with boa.reverts("Error function_selector = 0x, data = 0x"):
         boa.loads(code, ZERO_ADDRESS, name="ConstructorRevert")
-    assert ctx.value.args == ("Revert(b'assert impl.name() == \"crvUSD\"')",)
 
 
 def test_blueprint(zksync_env):

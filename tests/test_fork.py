@@ -3,7 +3,7 @@ import pytest
 from boa.rpc import EthereumRPC
 
 from boa_zksync import EraTestNode
-from boa_zksync.environment import ZERO_ADDRESS
+from boa_zksync.util import ZERO_ADDRESS
 
 
 def test_dummy_contract(zksync_sepolia_fork):

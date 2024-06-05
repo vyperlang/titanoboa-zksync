@@ -1,6 +1,5 @@
 import boa
 
-from boa_zksync.deployer import ZksyncDeployer
 from boa_zksync.environment import ZksyncEnv
 from boa_zksync.node import EraTestNode
 

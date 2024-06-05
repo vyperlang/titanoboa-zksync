@@ -5,7 +5,10 @@ from subprocess import Popen, TimeoutExpired
 from time import sleep
 
 import requests
+from boa.util.abi import Address
 from requests.exceptions import ConnectionError
+
+ZERO_ADDRESS = Address("0x0000000000000000000000000000000000000000")
 
 
 def find_free_port():

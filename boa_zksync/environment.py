@@ -11,15 +11,14 @@ from boa.interpret import json
 from boa.network import NetworkEnv, _EstimateGasFailed
 from boa.rpc import RPC, EthereumRPC, RPCError, to_hex, to_int
 from boa.util.abi import Address
-from eth.exceptions import VMError
 from eth_account import Account
 from requests import HTTPError
 
 from boa_zksync.deployer import ZksyncDeployer
 from boa_zksync.node import EraTestNode
 from boa_zksync.types import DeployTransaction, ZksyncComputation, ZksyncMessage
+from boa_zksync.util import ZERO_ADDRESS
 
-ZERO_ADDRESS = Address("0x0000000000000000000000000000000000000000")
 _CONTRACT_DEPLOYER_ADDRESS = Address("0x0000000000000000000000000000000000008006")
 with open(Path(__file__).parent / "IContractDeployer.json") as f:
     CONTRACT_DEPLOYER = ABIContractFactory.from_abi_dict(
@@ -27,11 +26,16 @@ with open(Path(__file__).parent / "IContractDeployer.json") as f:
     )
 
 
+class TransactionError(Exception):
+    pass
+
+
 class ZksyncEnv(NetworkEnv):
     """
     An implementation of the Env class for zkSync environments.
     This is a mix-in so the logic may be reused in both network and browser modes.
     """
+
     deployer_class = ZksyncDeployer
 
     def __init__(self, rpc: str | RPC, *args, **kwargs):
@@ -126,22 +130,13 @@ class ZksyncEnv(NetworkEnv):
         sender = self._check_sender(self._get_sender(sender))
         args = ZksyncMessage(sender, to_address, gas or 0, value, data)
 
-        computation = self._compute(args)
         if is_modifying:
-            try:
-                receipt, trace = self._send_txn(**args.as_tx_params())
-                self.last_receipt = receipt
-                if trace:
-                    assert (
-                        computation.is_error == trace.is_error
-                    ), f"VMError mismatch: {computation.error} != {trace.error}"
-                    return ZksyncComputation.from_debug_trace(trace.raw_trace)
+            receipt, trace = self._send_txn(**args.as_tx_params())
+            self.last_receipt = receipt
+            if trace:
+                return ZksyncComputation.from_debug_trace(trace.raw_trace)
 
-            except _EstimateGasFailed:
-                if not computation.is_error:  # trace gives more information
-                    return ZksyncComputation(args, error=VMError("Estimate gas failed"))
-
-        return computation
+        return self._compute(args)
 
     def deploy_code(
         self,
@@ -255,9 +250,9 @@ class ZksyncEnv(NetworkEnv):
             )
             return int(estimated_gas, 16)
         except RPCError as e:
-            compute = self._compute(tx.get_estimate_msg())
-            if compute.is_error:
-                raise compute.error
+            computation = self._compute(tx.get_estimate_msg())
+            if computation.is_error:
+                raise _EstimateGasFailed(computation)
             raise _EstimateGasFailed(e) from e
 
     def _compute(self, args: ZksyncMessage):
