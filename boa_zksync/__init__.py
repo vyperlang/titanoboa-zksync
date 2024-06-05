@@ -7,19 +7,16 @@ from boa_zksync.node import EraTestNode
 
 def set_zksync_env(url):
     boa.set_env(ZksyncEnv.from_url(url))
-    boa.set_deployer_class(ZksyncDeployer)
 
 
 def set_zksync_test_env(node_args=()):
     boa.set_env(ZksyncEnv(rpc=EraTestNode(node_args=node_args)))
-    boa.set_deployer_class(ZksyncDeployer)
 
 
 def set_zksync_fork(url, *args, **kwargs):
     env = ZksyncEnv.from_url(url)
     env.fork(*args, **kwargs)
     boa.set_env(env)
-    boa.set_deployer_class(ZksyncDeployer)
 
 
 def set_zksync_browser_env(*args, **kwargs):
@@ -27,7 +24,6 @@ def set_zksync_browser_env(*args, **kwargs):
     from boa_zksync.browser import ZksyncBrowserEnv
 
     boa.set_env(ZksyncBrowserEnv(*args, **kwargs))
-    boa.set_deployer_class(ZksyncDeployer)
 
 
 boa.set_zksync_env = set_zksync_env

@@ -15,6 +15,7 @@ from eth.exceptions import VMError
 from eth_account import Account
 from requests import HTTPError
 
+from boa_zksync.deployer import ZksyncDeployer
 from boa_zksync.node import EraTestNode
 from boa_zksync.types import DeployTransaction, ZksyncComputation, ZksyncMessage
 
@@ -31,6 +32,7 @@ class ZksyncEnv(NetworkEnv):
     An implementation of the Env class for zkSync environments.
     This is a mix-in so the logic may be reused in both network and browser modes.
     """
+    deployer_class = ZksyncDeployer
 
     def __init__(self, rpc: str | RPC, *args, **kwargs):
         super().__init__(rpc, *args, **kwargs)
