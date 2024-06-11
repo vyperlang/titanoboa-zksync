@@ -32,6 +32,7 @@ class ZksyncEnv(NetworkEnv):
     An implementation of the Env class for zkSync environments.
     This is a mix-in so the logic may be reused in both network and browser modes.
     """
+
     deployer_class = ZksyncDeployer
 
     def __init__(self, rpc: str | RPC, *args, **kwargs):
@@ -57,7 +58,11 @@ class ZksyncEnv(NetworkEnv):
 
     def _reset_fork(self, block_identifier="latest"):
         self._vm = None
-        if block_identifier == "latest" and isinstance(self._rpc, EraTestNode) and (inner_rpc := self._rpc.inner_rpc):
+        if (
+            block_identifier == "latest"
+            and isinstance(self._rpc, EraTestNode)
+            and (inner_rpc := self._rpc.inner_rpc)
+        ):
             del self._rpc  # close the old rpc
             self._rpc = inner_rpc
 

@@ -175,7 +175,9 @@ class ZksyncCompilerData:
 
     @cached_property
     def vyper(self) -> CompilerData:
-        return compiler_data(self.source_code, self.contract_name, VyperDeployer, settings=self.settings)
+        return compiler_data(
+            self.source_code, self.contract_name, VyperDeployer, settings=self.settings
+        )
 
     @cached_property
     def settings(self):
