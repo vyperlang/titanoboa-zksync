@@ -1,15 +1,15 @@
 from functools import cached_property
 from pathlib import Path
 
-from boa import Env, BoaError
+from boa import BoaError, Env
 from boa.contracts.abi.abi_contract import ABIContractFactory, ABIFunction
 from boa.network import _EstimateGasFailed
 from boa.util.abi import Address
 
 from boa_zksync.compile import compile_zksync, compile_zksync_source
 from boa_zksync.contract import ZksyncContract
-from boa_zksync.util import ZERO_ADDRESS
 from boa_zksync.types import ZksyncCompilerData, ZksyncComputation
+from boa_zksync.util import ZERO_ADDRESS
 
 
 class ZksyncDeployer(ABIContractFactory):
