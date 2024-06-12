@@ -14,8 +14,9 @@ class ZksyncDeployer(ABIContractFactory):
 
     def __init__(self, compiler_data: ZksyncCompilerData, filename=None):
         super().__init__(
-            compiler_data.contract_name, compiler_data.abi, filename, compiler_data
+            compiler_data.contract_name, compiler_data.abi, filename
         )
+        self.compiler_data = compiler_data
 
     @staticmethod
     def create_compiler_data(
@@ -31,6 +32,12 @@ class ZksyncDeployer(ABIContractFactory):
         if filename:
             return compile_zksync(contract_name, filename, compiler_args)
         return compile_zksync_source(source_code, contract_name, compiler_args)
+
+    @classmethod
+    def from_abi_dict(
+        cls, abi, name="<anonymous contract>", filename=None
+    ):
+        raise NotImplementedError("ZksyncDeployer does not support loading from ABI")
 
     def deploy(self, *args, value=0, **kwargs) -> ZksyncContract:
         env = Env.get_singleton()
@@ -58,13 +65,13 @@ class ZksyncDeployer(ABIContractFactory):
         address = Address(address)
         env = Env.get_singleton()
         contract = ZksyncContract(
+            self.compiler_data,
             self._name,
             self.abi,
-            self._functions,
+            self.functions,
             address=address,
             filename=self.filename,
             env=env,
-            compiler_data=self.compiler_data,
         )
         env.register_contract(address, contract)
         return contract

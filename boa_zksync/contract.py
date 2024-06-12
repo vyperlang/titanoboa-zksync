@@ -1,5 +1,6 @@
 import textwrap
 from contextlib import contextmanager
+from typing import Optional
 
 from boa.contracts.abi.abi_contract import ABIContract, ABIFunction
 from boa.contracts.vyper.vyper_contract import VyperContract
@@ -16,12 +17,17 @@ from boa_zksync.compiler_utils import (
     generate_source_for_arbitrary_stmt,
     generate_source_for_internal_fn,
 )
+from boa_zksync.types import ZksyncCompilerData
 
 
 class ZksyncContract(ABIContract):
     """
     A contract deployed to the Zksync network.
     """
+
+    def __init__(self, compiler_data: ZksyncCompilerData, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.compiler_data = compiler_data
 
     def eval(self, code):
         return ZksyncEval(code, self)()

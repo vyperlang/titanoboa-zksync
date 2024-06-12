@@ -45,7 +45,7 @@ class ZksyncEnv(NetworkEnv):
     def create(self):
         return next(
             func
-            for func in CONTRACT_DEPLOYER._functions
+            for func in CONTRACT_DEPLOYER.functions
             if func.full_signature == "create(bytes32,bytes32,bytes)"
         )
 
