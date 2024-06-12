@@ -40,7 +40,7 @@ def stop_subprocess(proc: Popen[bytes]):
 
 def install_zkvyper_compiler(
     source="https://raw.githubusercontent.com/matter-labs/zkvyper-bin/"
-    "cf39e70a2b62028f33cd4431393bfc7aca31017b/linux-amd64/zkvyper-linux-amd64-musl-v1.4.1",
+    "a0d3b90c93d8fba176233fdef074694add25a682/linux-amd64/zkvyper-linux-amd64-musl-v1.5.0",
     destination="/usr/local/bin/zkvyper",
 ):
     """
