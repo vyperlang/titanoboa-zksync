@@ -1,6 +1,5 @@
 import textwrap
 from contextlib import contextmanager
-from typing import Optional
 
 from boa.contracts.abi.abi_contract import ABIContract, ABIFunction
 from boa.contracts.vyper.vyper_contract import VyperContract

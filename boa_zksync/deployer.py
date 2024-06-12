@@ -13,9 +13,7 @@ from boa_zksync.types import ZksyncCompilerData
 class ZksyncDeployer(ABIContractFactory):
 
     def __init__(self, compiler_data: ZksyncCompilerData, filename=None):
-        super().__init__(
-            compiler_data.contract_name, compiler_data.abi, filename
-        )
+        super().__init__(compiler_data.contract_name, compiler_data.abi, filename)
         self.compiler_data = compiler_data
 
     @staticmethod
@@ -34,9 +32,7 @@ class ZksyncDeployer(ABIContractFactory):
         return compile_zksync_source(source_code, contract_name, compiler_args)
 
     @classmethod
-    def from_abi_dict(
-        cls, abi, name="<anonymous contract>", filename=None
-    ):
+    def from_abi_dict(cls, abi, name="<anonymous contract>", filename=None):
         raise NotImplementedError("ZksyncDeployer does not support loading from ABI")
 
     def deploy(self, *args, value=0, **kwargs) -> ZksyncContract:
