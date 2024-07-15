@@ -12,7 +12,7 @@ For Google Colab: The following dependencies should be downloaded automatically.
 #### Zkvyper Compiler
 We use the [era-compiler-vyper](https://github.com/matter-labs/era-compiler-vyper) a.k.a. `zkvyper`: to compile Vyper code to ZkSync-compatible bytecode.
 
-1. Download the binary from the [zkvyper-bin repository](https://github.com/matter-labs/zkvyper-bin).
+1. Download the binary from the [zkvyper-bin repository](https://github.com/matter-labs/zkvyper-bin) and rename it as `zkvyper`.
  
 2. On Linux/macOS, mark the binary as executable:
 `chmod a+x <path to file>`
