@@ -8,9 +8,7 @@ keywords = ["ethereum", "evm", "smart contract", "development", "vyper", "zksync
 classifiers = ["Topic :: Software Development"]
 
 # Requirements
-dependencies = [
-    "titanoboa>=0.1,<0.2",
-]
+dependencies = ["titanoboa>=0.1,<0.2"]
 
 [project.optional-dependencies]
 forking-recommended = ["ujson"]
