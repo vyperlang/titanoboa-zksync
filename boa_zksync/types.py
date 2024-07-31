@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
 from functools import cached_property
+from typing import Optional
 
 import rlp
 from boa.contracts.vyper.vyper_contract import VyperDeployer
@@ -168,6 +169,11 @@ class ZksyncCompilerData:
     bytecode_runtime: str
     warnings: list[str]
     factory_deps: list[str]
+
+    # zkvyper>=1.5.3 fields
+    layout: Optional[dict] = None
+    userdoc: Optional[dict] = None
+    devdoc: Optional[dict] = None
 
     @cached_property
     def global_ctx(self):
