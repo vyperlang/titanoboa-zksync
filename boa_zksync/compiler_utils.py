@@ -1,7 +1,7 @@
 import textwrap
 
 import vyper.ast as vy_ast
-from vyper.ast.utils import parse_to_ast
+from vyper.ast.parse import parse_to_ast
 from vyper.exceptions import InvalidType
 from vyper.semantics.analysis.utils import get_exact_type_from_node
 

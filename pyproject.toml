@@ -4,11 +4,17 @@ version = "0.0.2"
 description = "A Zksync plugin for the Titanoboa Vyper interpreter"
 license = { file = "LICENSE" }
 readme = "README.md"
-keywords = ["ethereum", "evm", "smart contract", "development", "vyper", "zksync"]
+keywords = [
+    "ethereum",
+    "evm",
+    "smart contract",
+    "development",
+    "vyper",
+    "zksync",
+]
 classifiers = ["Topic :: Software Development"]
 
-# Requirements
-dependencies = ["titanoboa>=0.1,<0.2"]
+dependencies = ["titanoboa>=0.2.0"]
 
 [project.optional-dependencies]
 forking-recommended = ["ujson"]
