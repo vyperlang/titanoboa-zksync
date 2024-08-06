@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 from boa import Env
 from boa.contracts.abi.abi_contract import ABIContractFactory, ABIFunction
 from boa.util.abi import Address
+from vyper.compiler import CompilerData
 
 from boa_zksync.compile import compile_zksync, compile_zksync_source
 from boa_zksync.contract import ZksyncContract
@@ -16,24 +17,25 @@ if TYPE_CHECKING:
 
 class ZksyncDeployer(ABIContractFactory):
 
-    def __init__(self, compiler_data: ZksyncCompilerData, filename=None):
-        super().__init__(compiler_data.contract_name, compiler_data.abi, filename)
-        self.compiler_data = compiler_data
+    def __init__(self, compiler_data: CompilerData, filename=None):
+        contract_name = Path(compiler_data.contract_path).stem
+        self.zkvyper_data = self._compile(compiler_data, contract_name, filename)
+        super().__init__(
+            contract_name, self.zkvyper_data.abi, compiler_data.contract_path
+        )
 
     @staticmethod
-    def create_compiler_data(
-        source_code: str,
-        contract_name: str = None,
-        filename: str = None,
+    def _compile(
+        compiler_data: CompilerData,
+        contract_name: str,
+        filename: str,
         compiler_args: dict = None,
-        **kwargs,
     ) -> ZksyncCompilerData:
-        if not contract_name:
-            contract_name = Path(filename).stem if filename else "<anonymous contract>"
-
-        if filename:
-            return compile_zksync(contract_name, filename, compiler_args)
-        return compile_zksync_source(source_code, contract_name, compiler_args)
+        if filename in ("", None, "<unknown>"):
+            return compile_zksync_source(
+                compiler_data.file_input.source_code, contract_name, compiler_args
+            )
+        return compile_zksync(contract_name, filename, compiler_args)
 
     @classmethod
     def from_abi_dict(cls, abi, name="<anonymous contract>", filename=None):
@@ -41,7 +43,7 @@ class ZksyncDeployer(ABIContractFactory):
 
     def deploy(self, *args, value=0, **kwargs) -> ZksyncContract:
         address, _ = self.env.deploy_code(
-            bytecode=self.compiler_data.bytecode,
+            bytecode=self.zkvyper_data.bytecode,
             value=value,
             constructor_calldata=(
                 self.constructor.prepare_calldata(*args, **kwargs)
@@ -57,7 +59,7 @@ class ZksyncDeployer(ABIContractFactory):
         """
         address = Address(address)
         contract = ZksyncContract(
-            self.compiler_data,
+            self.zkvyper_data,
             self._name,
             self.abi,
             self.functions,
@@ -92,6 +94,7 @@ class ZksyncDeployer(ABIContractFactory):
         """
         env = Env.get_singleton()
         from boa_zksync.environment import ZksyncEnv
+
         assert isinstance(
             env, ZksyncEnv
         ), "ZksyncDeployer can only be used in zkSync environments"

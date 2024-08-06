@@ -12,7 +12,7 @@ from eth_account import Account
 from eth_account.datastructures import SignedMessage
 from eth_account.messages import encode_typed_data
 from rlp.sedes import BigEndianInt, Binary, List
-from vyper.compiler import CompilerData, Settings
+from vyper.compiler import CompilerData
 from vyper.compiler.settings import OptimizationLevel
 
 _EIP712_TYPE = bytes.fromhex("71")
@@ -181,13 +181,14 @@ class ZksyncCompilerData:
 
     @cached_property
     def vyper(self) -> CompilerData:
+        # TODO: Return the compile_data already created by boa.
         return compiler_data(
-            self.source_code, self.contract_name, VyperDeployer, settings=self.settings
+            self.source_code,
+            self.contract_name,
+            "<unknown>",
+            VyperDeployer,
+            optimize=OptimizationLevel.NONE,
         )
-
-    @cached_property
-    def settings(self):
-        return Settings(optimize=OptimizationLevel.NONE)
 
 
 @dataclass

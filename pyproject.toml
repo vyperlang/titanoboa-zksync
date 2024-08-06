@@ -1,6 +1,6 @@
 [project]
 name = "titanoboa-zksync"
-version = "0.1.0"
+version = "0.2.0"
 description = "A Zksync plugin for the Titanoboa Vyper interpreter"
 license = { file = "LICENSE" }
 readme = "README.md"

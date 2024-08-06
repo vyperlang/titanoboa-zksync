@@ -61,10 +61,9 @@ class ZksyncContract(ABIContract):
         def internal():
             return None
 
-        for fn in self.compiler_data.global_ctx.functions:
-            typ = fn._metadata["type"]
-            if typ.is_internal:
-                setattr(internal, fn.name, ZksyncInternalFunction(typ, self))
+        for fn_name, fn in self.compiler_data.global_ctx.functions.items():
+            if fn.is_internal:
+                setattr(internal, fn_name, ZksyncInternalFunction(fn, self))
         return internal
 
     def get_logs(self):

@@ -12,7 +12,7 @@ def simple_contract(zksync_env):
 totalSupply: public(uint256)
 balances: HashMap[address, uint256]
 
-@external
+@deploy
 def __init__(t: uint256):
     self.totalSupply = t
     self.balances[self] = t
@@ -39,7 +39,7 @@ def test_blueprint(zksync_env):
     blueprint_code = """
 val: public(uint256)
 
-@external
+@deploy
 def __init__(val: uint256):
     self.val = val
 
@@ -74,7 +74,7 @@ def test_blueprint_immutable(zksync_env):
     blueprint_code = """
 VAL: immutable(uint256)
 
-@external
+@deploy
 def __init__(val: uint256):
     VAL = val
 
@@ -140,7 +140,7 @@ interface HasName:
 @external
 @view
 def get_name_of(addr: HasName) -> String[32]:
-    return addr.name()
+    return staticcall addr.name()
     """,
         name="CallerContract",
     )
@@ -153,14 +153,14 @@ def get_name_of(addr: HasName) -> String[32]:
     assert trace == StackTrace(
         [
             "  Test an error(<CalledContract interface at "
-            f"{called_contract.address}>.name() -> ['string'])",
+            f"{called_contract.address}> (file CalledContract).name() -> ['string'])",
             "  Test an error(<CallerContract interface at "
-            f"{caller_contract.address}>.get_name_of(address) -> "
-            "['string'])",
+            f"{caller_contract.address}> (file "
+            "CallerContract).get_name_of(address) -> ['string'])",
             "   <Unknown contract 0x0000000000000000000000000000000000008009>",
             "   <Unknown contract 0x0000000000000000000000000000000000008002>",
             "  Test an error(<CallerContract interface at "
-            f"{caller_contract.address}>.get_name_of(address) -> "
+            f"{caller_contract.address}> (file CallerContract).get_name_of(address) -> "
             "['string'])",
         ]
     )
@@ -198,7 +198,7 @@ event Transfer:
     receiver: indexed(address)
     value: uint256
 
-@external
+@deploy
 def __init__(supply: uint256):
     log Transfer(empty(address), msg.sender, supply)
 
