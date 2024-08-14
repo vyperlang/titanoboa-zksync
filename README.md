@@ -80,9 +80,6 @@ constructor_args, address = [], "0x1234..."
 
 boa_zksync.set_zksync_test_env()  # configure the environment, see previous section
 
-# Compile a contract from source file
-boa_zksync.ZksyncDeployer.create_compiler_data("source code")
-
 # Load a contract from source code and deploy
 boa.loads("contract source code", *constructor_args)
 

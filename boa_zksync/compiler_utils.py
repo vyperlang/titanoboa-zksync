@@ -1,7 +1,7 @@
 import textwrap
 
 import vyper.ast as vy_ast
-from vyper.ast.utils import parse_to_ast
+from vyper.ast.parse import parse_to_ast
 from vyper.exceptions import InvalidType
 from vyper.semantics.analysis.utils import get_exact_type_from_node
 
@@ -65,9 +65,7 @@ def generate_source_for_arbitrary_stmt(source_code, contract):
 
 
 def detect_expr_type(source_code, contract):
-    ast = parse_to_ast(source_code)
-    vy_ast.folding.fold(ast)
-    ast = ast.body[0]
+    ast = parse_to_ast(source_code).body[0]
     if isinstance(ast, vy_ast.Expr):
         with contract.override_vyper_namespace():
             try:
