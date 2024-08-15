@@ -40,7 +40,8 @@ def compile_zksync(
         with open(filename) as file:
             source_code = file.read()
 
-    compile_output = output[filename.removeprefix("./")]
+    # remove prefix if exists:
+    compile_output, vyper_version, zkvyper_version = output.values()
     bytecode = to_bytes(compile_output.pop("bytecode"))
     return ZksyncCompilerData(
         contract_name, source_code, compiler_args, bytecode, **compile_output
