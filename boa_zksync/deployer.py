@@ -92,6 +92,7 @@ class ZksyncDeployer(ABIContractFactory):
         """
         env = Env.get_singleton()
         from boa_zksync.environment import ZksyncEnv
+
         assert isinstance(
             env, ZksyncEnv
         ), "ZksyncDeployer can only be used in zkSync environments"
