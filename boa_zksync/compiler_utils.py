@@ -81,11 +81,11 @@ def get_compiler_output(output):
     # we need this helper method to get the correct key containing compiler output
     # from the compiler. Assuming key names could change and also assuming that the
     # number of keys could change, this method breaks if any of that happens:
-    
-    excluded_keys = {"version", "zk_version"}
+
+    excluded_keys = {"version", "zk_version", "__VYPER_MINIMAL_PROXY_CONTRACT"}
     contract_keys = set(output.keys()) - excluded_keys
-    
+
     if len(contract_keys) != 1:
-        raise ValueError(f"Expected exactly one contract key, found {len(contract_keys)}")
-    
+        raise ValueError(f"Expected exactly one contract key, found {contract_keys}")
+
     return output[next(iter(contract_keys))]

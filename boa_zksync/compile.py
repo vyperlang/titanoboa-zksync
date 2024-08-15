@@ -40,7 +40,7 @@ def compile_zksync(
     if source_code is None:
         with open(filename) as file:
             source_code = file.read()
-    
+
     compile_output = get_compiler_output(output)
     bytecode = to_bytes(compile_output.pop("bytecode"))
     return ZksyncCompilerData(
