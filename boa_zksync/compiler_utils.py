@@ -77,7 +77,7 @@ def detect_expr_type(source_code, contract):
     return None
 
 
-def get_contract_key(output):
+def get_compiler_output(output):
     # we need this helper method to get the correct key containing compiler output
     # from the compiler. Assuming key names could change and also assuming that the
     # number of keys could change, this method breaks if any of that happens:
@@ -88,4 +88,4 @@ def get_contract_key(output):
     if len(contract_keys) != 1:
         raise ValueError(f"Expected exactly one contract key, found {len(contract_keys)}")
     
-    return next(iter(contract_keys))
+    return output[next(iter(contract_keys))]

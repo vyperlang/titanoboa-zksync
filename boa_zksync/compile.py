@@ -7,7 +7,7 @@ from tempfile import TemporaryDirectory
 
 from boa.rpc import to_bytes
 
-from boa_zksync.compiler_utils import get_contract_key
+from boa_zksync.compiler_utils import get_compiler_output
 from boa_zksync.types import ZksyncCompilerData
 
 
@@ -41,7 +41,7 @@ def compile_zksync(
         with open(filename) as file:
             source_code = file.read()
     
-    compile_output = get_contract_key(output)
+    compile_output = get_compiler_output(output)
     bytecode = to_bytes(compile_output.pop("bytecode"))
     return ZksyncCompilerData(
         contract_name, source_code, compiler_args, bytecode, **compile_output
