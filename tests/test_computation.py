@@ -13,25 +13,29 @@ def test_from_debug_trace_nested():
         "from": sender,
         "to": to,
         "output": boa.env.generate_address(),
-        "calls": [{
-            "from": boa.env.generate_address(),
-            "to": boa.env.generate_address(),
-            "output": boa.env.generate_address(),
-            "calls": [],
-            **_required_fields,
-        }, {
-            "from": sender,
-            "to": to,
-            "output": "0x" +result.hex(),
-            "calls": [],
-            **_required_fields,
-        }, {
-            "from": boa.env.generate_address(),
-            "to": boa.env.generate_address(),
-            "output": boa.env.generate_address(),
-            "calls": [],
-            **_required_fields,
-        }]
+        "calls": [
+            {
+                "from": boa.env.generate_address(),
+                "to": boa.env.generate_address(),
+                "output": boa.env.generate_address(),
+                "calls": [],
+                **_required_fields,
+            },
+            {
+                "from": sender,
+                "to": to,
+                "output": "0x" + result.hex(),
+                "calls": [],
+                **_required_fields,
+            },
+            {
+                "from": boa.env.generate_address(),
+                "to": boa.env.generate_address(),
+                "output": boa.env.generate_address(),
+                "calls": [],
+                **_required_fields,
+            },
+        ],
     }
     assert ZksyncComputation.from_debug_trace(output).output == result
 
@@ -43,7 +47,7 @@ def test_from_debug_trace_production_mode():
     output = {
         "from": boa.env.generate_address(),
         "to": boa.env.generate_address(),
-        "output": "0x" +result.hex(),
+        "output": "0x" + result.hex(),
         "calls": [],
         **_required_fields,
     }
