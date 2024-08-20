@@ -261,6 +261,7 @@ class ZksyncComputation:
         """
         Finds the actual transaction computation, since zksync has system
         contract calls in the trace.
+        Note: The output has more data when running via the era test node.
         """
         to, sender = output["to"], output["from"]
 
@@ -271,7 +272,10 @@ class ZksyncComputation:
                 if trace["to"] == to and trace["from"] == sender:
                     return cls.from_call_trace(trace)
 
-        return _find(output["calls"])
+        if result := _find(output["calls"]):
+            return result
+        # in production mode the result is not always nested
+        return cls.from_call_trace(output)
 
     @property
     def is_success(self) -> bool:

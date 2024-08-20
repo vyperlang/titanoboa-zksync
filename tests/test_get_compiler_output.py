@@ -31,7 +31,6 @@ def test_get_compiler_output_unexpected_key():
     output_dict = {"blabla": 123, "zk_versions": 456, "version": 789}
 
     with pytest.raises(
-        ValueError,
-        match="Expected exactly one contract key, found blabla, zk_versions",
+        ValueError, match="Expected exactly one contract key, found blabla, zk_versions"
     ):
         get_compiler_output(output_dict)
