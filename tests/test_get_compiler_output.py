@@ -21,7 +21,7 @@ def test_get_compiler_output_too_many_keys():
 
     with pytest.raises(
         ValueError,
-        match="Expected exactly one contract key, found {'blabla', 'new_compiler_output_key'}",
+        match="Expected exactly one contract key, found blabla, new_compiler_output_key",
     ):
         get_compiler_output(output_dict)
 
@@ -32,6 +32,6 @@ def test_get_compiler_output_unexpected_key():
 
     with pytest.raises(
         ValueError,
-        match="Expected exactly one contract key, found {'blabla', 'zk_versions'}",
+        match="Expected exactly one contract key, found blabla, zk_versions",
     ):
         get_compiler_output(output_dict)

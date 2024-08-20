@@ -86,6 +86,7 @@ def get_compiler_output(output):
     contract_keys = set(output.keys()) - excluded_keys
 
     if len(contract_keys) != 1:
-        raise ValueError(f"Expected exactly one contract key, found {contract_keys}")
+        unexpected = ", ".join(sorted(contract_keys))
+        raise ValueError(f"Expected exactly one contract key, found {unexpected}")
 
     return output[next(iter(contract_keys))]
