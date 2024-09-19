@@ -137,7 +137,7 @@ class ZksyncInternalFunction(_ZksyncInternal):
             "name": f"__boa_private_{fn.name}__",
             "type": "function",
         }
-        super().__init__(abi, contract._name)
+        super().__init__(abi, contract.contract_name)
         self.contract = contract
         self.func_t = fn
 
@@ -163,7 +163,7 @@ class ZksyncInternalVariable(_ZksyncInternal):
             "constant": True,
             "type": "function",
         }
-        super().__init__(abi, contract._name)
+        super().__init__(abi, contract.contract_name)
         self.contract = contract
         self.var = var
         self.var_name = name
@@ -198,7 +198,7 @@ class ZksyncEval(_ZksyncInternal):
             "name": "__boa_debug__",
             "type": "function",
         }
-        super().__init__(abi, contract._name)
+        super().__init__(abi, contract.contract_name)
         self.contract = contract
         self.code = code
 

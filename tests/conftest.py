@@ -23,7 +23,7 @@ def zksync_sepolia_fork(account):
     fork_url = os.getenv("FORK_URL", "https://sepolia.era.zksync.dev")
     boa_zksync.set_zksync_fork(
         fork_url,
-        block_identifier=1689570,
+        block_identifier=3000000,
         node_args=("--show-calls", "all", "--show-outputs", "true"),
     )
     boa.env.add_account(account, force_eoa=True)

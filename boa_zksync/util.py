@@ -39,7 +39,7 @@ def stop_subprocess(proc: Popen[bytes]):
 
 
 def install_zkvyper_compiler(
-    source="https://raw.githubusercontent.com/matter-labs/zkvyper-bin/v1.5.3/linux-amd64/zkvyper-linux-amd64-musl-v1.5.3",  # noqa: E501
+    source="https://raw.githubusercontent.com/matter-labs/zkvyper-bin/v1.5.4/linux-amd64/zkvyper-linux-amd64-musl-v1.5.4",  # noqa: E501
     destination="/usr/local/bin/zkvyper",
 ):
     """
@@ -58,7 +58,7 @@ def install_zkvyper_compiler(
 
 
 def install_era_test_node(
-    source="https://github.com/matter-labs/era-test-node/releases/download/v0.1.0-alpha.25/era_test_node-v0.1.0-alpha.25-x86_64-unknown-linux-gnu.tar.gz",  # noqa: E501
+    source="https://github.com/matter-labs/era-test-node/releases/download/v0.1.0-alpha.27/era_test_node-v0.1.0-alpha.27-x86_64-unknown-linux-gnu.tar.gz",  # noqa: E501
     destination="/usr/local/bin/era_test_node",
 ):
     """

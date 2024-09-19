@@ -3,7 +3,6 @@ from functools import cached_property
 from hashlib import sha256
 from pathlib import Path
 from typing import Any, Iterable, Optional, Type
-from unittest.mock import MagicMock
 
 from boa.contracts.abi.abi_contract import ABIContract, ABIContractFactory
 from boa.environment import _AddressType
@@ -17,10 +16,14 @@ from requests import HTTPError
 
 from boa_zksync.deployer import ZksyncDeployer
 from boa_zksync.node import EraTestNode
-from boa_zksync.types import DeployTransaction, ZksyncComputation, ZksyncMessage
+from boa_zksync.types import (
+    CONTRACT_DEPLOYER_ADDRESS,
+    ZERO_ADDRESS,
+    DeployTransaction,
+    ZksyncComputation,
+    ZksyncMessage, DEFAULT_SALT,
+)
 
-ZERO_ADDRESS = "0x0000000000000000000000000000000000000000"
-_CONTRACT_DEPLOYER_ADDRESS = "0x0000000000000000000000000000000000008006"
 with open(Path(__file__).parent / "IContractDeployer.json") as f:
     CONTRACT_DEPLOYER = ABIContractFactory.from_abi_dict(
         json.load(f), "ContractDeployer"
@@ -52,8 +55,8 @@ class ZksyncEnv(NetworkEnv):
     @property
     def vm(self):
         if self._vm is None:
-            # todo: vyper base contract calls this property
-            self._vm = MagicMock(state=_RPCState(self._rpc))
+            self._vm = lambda: None
+            self._vm.state = _RPCState(self._rpc)
         return self._vm
 
     def _reset_fork(self, block_identifier="latest"):
@@ -132,11 +135,11 @@ class ZksyncEnv(NetworkEnv):
                 "debug_traceCall",
                 [args.as_json_dict(), "latest", {"tracer": "callTracer"}],
             )
-            traced_computation = ZksyncComputation.from_call_trace(trace_call)
+            traced_computation = ZksyncComputation.from_call_trace(self, trace_call)
         except (RPCError, HTTPError):
             output = self._rpc.fetch("eth_call", [args.as_json_dict(), "latest"])
             traced_computation = ZksyncComputation(
-                args, bytes.fromhex(output.removeprefix("0x"))
+                self, args, bytes.fromhex(output.removeprefix("0x"))
             )
 
         if is_modifying:
@@ -147,11 +150,13 @@ class ZksyncEnv(NetworkEnv):
                     assert (
                         traced_computation.is_error == trace.is_error
                     ), f"VMError mismatch: {traced_computation.error} != {trace.error}"
-                    return ZksyncComputation.from_debug_trace(trace.raw_trace)
+                    return ZksyncComputation.from_debug_trace(self, trace.raw_trace)
 
             except _EstimateGasFailed:
                 if not traced_computation.is_error:  # trace gives more information
-                    return ZksyncComputation(args, error=VMError("Estimate gas failed"))
+                    return ZksyncComputation(
+                        self, args, error=VMError("Estimate gas failed")
+                    )
 
         return traced_computation
 
@@ -163,7 +168,8 @@ class ZksyncEnv(NetworkEnv):
         bytecode=b"",
         constructor_calldata=b"",
         dependency_bytecodes: Iterable[bytes] = (),
-        salt=b"\0" * 32,
+        salt=DEFAULT_SALT,
+        max_priority_fee_per_gas=None,
         **kwargs,
     ) -> tuple[Address, bytes]:
         """
@@ -175,6 +181,7 @@ class ZksyncEnv(NetworkEnv):
         :param constructor_calldata: The calldata for the contract constructor.
         :param dependency_bytecodes: The bytecodes of the blueprints.
         :param salt: The salt for the contract deployment.
+        :param max_priority_fee_per_gas: The max priority fee per gas for the transaction.
         :param kwargs: Additional parameters for the transaction.
         :return: The address of the deployed contract and the bytecode hash.
         """
@@ -199,10 +206,10 @@ class ZksyncEnv(NetworkEnv):
         bytecode_hash = _hash_code(bytecode)
         tx = DeployTransaction(
             sender=sender,
-            to=_CONTRACT_DEPLOYER_ADDRESS,
+            to=CONTRACT_DEPLOYER_ADDRESS,
             gas=gas or 0,
             gas_price=gas_price,
-            max_priority_fee_per_gas=kwargs.pop("max_priority_fee_per_gas", gas_price),
+            max_priority_fee_per_gas=max_priority_fee_per_gas or gas_price,
             nonce=nonce,
             value=value,
             calldata=self.create.prepare_calldata(
@@ -234,7 +241,7 @@ class ZksyncEnv(NetworkEnv):
         return self._rpc.fetch("eth_getCode", [address, "latest"])
 
     def set_code(self, address: Address, bytecode: bytes):
-        return self._rpc.fetch("hardhat_setCode", [address, list(bytecode)])
+        return self._rpc.fetch("hardhat_setCode", [address, f"0x{bytecode.hex()}"])
 
     def generate_address(self, alias: Optional[str] = None) -> _AddressType:
         """

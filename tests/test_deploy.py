@@ -2,6 +2,7 @@ import boa
 import pytest
 from boa import BoaError
 from boa.contracts.base_evm_contract import StackTrace
+from boa.contracts.call_trace import TraceFrame
 
 STARTING_SUPPLY = 100
 
@@ -149,11 +150,12 @@ def get_name_of(addr: HasName) -> String[32]:
     with pytest.raises(BoaError) as ctx:
         caller_contract.get_name_of(called_contract)
 
-    (trace,) = ctx.value.args
-    assert trace == StackTrace(
+    (call_trace, stack_trace) = ctx.value.args
+    called_addr = called_contract.address
+    assert stack_trace == StackTrace(
         [
             "  Test an error(<CalledContract interface at "
-            f"{called_contract.address}> (file CalledContract).name() -> ['string'])",
+            f"{called_addr}> (file CalledContract).name() -> ['string'])",
             "  Test an error(<CallerContract interface at "
             f"{caller_contract.address}> (file "
             "CallerContract).get_name_of(address) -> ['string'])",
@@ -164,6 +166,21 @@ def get_name_of(addr: HasName) -> String[32]:
             "['string'])",
         ]
     )
+    assert isinstance(call_trace, TraceFrame)
+    assert str(call_trace).split("\n") == [
+        f'[E] [24523] CallerContract.get_name_of(addr = "{called_addr}") <0x>',
+        "    [E] [23592] Unknown contract 0x0000000000000000000000000000000000008002.0x4de2e468",
+        "        [566] Unknown contract 0x000000000000000000000000000000000000800B.0x29f172ad",
+        "        [1909] Unknown contract 0x000000000000000000000000000000000000800B.0x06bed036",
+        "            [159] Unknown contract 0x0000000000000000000000000000000000008010.0x00000000",
+        "        [449] Unknown contract 0x000000000000000000000000000000000000800B.0xa225efcb",
+        "        [2226] Unknown contract 0x0000000000000000000000000000000000008002.0x4de2e468",
+        "        [427] Unknown contract 0x000000000000000000000000000000000000800B.0xa851ae78",
+        "        [398] Unknown contract 0x0000000000000000000000000000000000008004.0xe516761e",
+        "        [E] [2566] Unknown contract 0x0000000000000000000000000000000000008009.0xb47fade1",
+        f'            [E] [1383] CallerContract.get_name_of(addr = "{called_addr}") <0x>',
+        "                [E] [403] CalledContract.name() <0x>",
+    ]
 
 
 def test_private(zksync_env):
