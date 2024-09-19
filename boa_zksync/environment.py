@@ -21,7 +21,7 @@ from boa_zksync.types import (
     ZERO_ADDRESS,
     DeployTransaction,
     ZksyncComputation,
-    ZksyncMessage,
+    ZksyncMessage, DEFAULT_SALT,
 )
 
 with open(Path(__file__).parent / "IContractDeployer.json") as f:
@@ -168,7 +168,7 @@ class ZksyncEnv(NetworkEnv):
         bytecode=b"",
         constructor_calldata=b"",
         dependency_bytecodes: Iterable[bytes] = (),
-        salt=b"\0" * 32,
+        salt=DEFAULT_SALT,
         max_priority_fee_per_gas=None,
         **kwargs,
     ) -> tuple[Address, bytes]:

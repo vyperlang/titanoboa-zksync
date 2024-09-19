@@ -9,7 +9,7 @@ from vyper.compiler import CompilerData
 
 from boa_zksync.compile import compile_zksync, compile_zksync_source
 from boa_zksync.contract import ZksyncContract
-from boa_zksync.types import ZksyncCompilerData
+from boa_zksync.types import ZksyncCompilerData, DEFAULT_SALT
 
 if TYPE_CHECKING:
     from boa_zksync.environment import ZksyncEnv
@@ -47,7 +47,7 @@ class ZksyncDeployer(ABIContractFactory):
         value=0,
         gas=None,
         dependency_bytecodes=(),
-        salt=b"\0" * 32,
+        salt=DEFAULT_SALT,
         max_priority_fee_per_gas=None,
         **kwargs,
     ) -> ZksyncContract:
