@@ -3,7 +3,6 @@ from functools import cached_property
 from hashlib import sha256
 from pathlib import Path
 from typing import Any, Iterable, Optional, Type
-from unittest.mock import MagicMock
 
 from boa.contracts.abi.abi_contract import ABIContract, ABIContractFactory
 from boa.environment import _AddressType
@@ -17,8 +16,13 @@ from requests import HTTPError
 
 from boa_zksync.deployer import ZksyncDeployer
 from boa_zksync.node import EraTestNode
-from boa_zksync.types import DeployTransaction, ZksyncComputation, ZksyncMessage, ZERO_ADDRESS, \
-    CONTRACT_DEPLOYER_ADDRESS
+from boa_zksync.types import (
+    CONTRACT_DEPLOYER_ADDRESS,
+    ZERO_ADDRESS,
+    DeployTransaction,
+    ZksyncComputation,
+    ZksyncMessage,
+)
 
 with open(Path(__file__).parent / "IContractDeployer.json") as f:
     CONTRACT_DEPLOYER = ABIContractFactory.from_abi_dict(
@@ -51,8 +55,8 @@ class ZksyncEnv(NetworkEnv):
     @property
     def vm(self):
         if self._vm is None:
-            # todo: vyper base contract calls this property
-            self._vm = MagicMock(state=_RPCState(self._rpc))
+            self._vm = lambda: None
+            self._vm.state = _RPCState(self._rpc)
         return self._vm
 
     def _reset_fork(self, block_identifier="latest"):
@@ -165,6 +169,7 @@ class ZksyncEnv(NetworkEnv):
         constructor_calldata=b"",
         dependency_bytecodes: Iterable[bytes] = (),
         salt=b"\0" * 32,
+        max_priority_fee_per_gas=None,
         **kwargs,
     ) -> tuple[Address, bytes]:
         """
@@ -176,6 +181,7 @@ class ZksyncEnv(NetworkEnv):
         :param constructor_calldata: The calldata for the contract constructor.
         :param dependency_bytecodes: The bytecodes of the blueprints.
         :param salt: The salt for the contract deployment.
+        :param max_priority_fee_per_gas: The max priority fee per gas for the transaction.
         :param kwargs: Additional parameters for the transaction.
         :return: The address of the deployed contract and the bytecode hash.
         """
@@ -203,7 +209,7 @@ class ZksyncEnv(NetworkEnv):
             to=CONTRACT_DEPLOYER_ADDRESS,
             gas=gas or 0,
             gas_price=gas_price,
-            max_priority_fee_per_gas=kwargs.pop("max_priority_fee_per_gas", gas_price),
+            max_priority_fee_per_gas=max_priority_fee_per_gas or gas_price,
             nonce=nonce,
             value=value,
             calldata=self.create.prepare_calldata(

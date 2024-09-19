@@ -41,10 +41,23 @@ class ZksyncDeployer(ABIContractFactory):
     def from_abi_dict(cls, abi, name="<anonymous contract>", filename=None):
         raise NotImplementedError("ZksyncDeployer does not support loading from ABI")
 
-    def deploy(self, *args, value=0, **kwargs) -> ZksyncContract:
+    def deploy(
+        self,
+        *args,
+        value=0,
+        gas=None,
+        dependency_bytecodes=(),
+        salt=b"\0" * 32,
+        max_priority_fee_per_gas=None,
+        **kwargs,
+    ) -> ZksyncContract:
         address, _ = self.env.deploy_code(
             bytecode=self.zkvyper_data.bytecode,
             value=value,
+            gas=gas,
+            dependency_bytecodes=dependency_bytecodes,
+            salt=salt,
+            max_priority_fee_per_gas=max_priority_fee_per_gas,
             constructor_calldata=(
                 self.constructor.prepare_calldata(*args, **kwargs)
                 if args or kwargs

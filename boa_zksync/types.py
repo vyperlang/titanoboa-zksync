@@ -83,7 +83,7 @@ class DeployTransaction:
             "to": self.to,
             "gas": f"0x{self.gas:0x}",
             "gasPrice": f"0x{self.gas_price:0x}",
-            "maxPriorityFeePerGas": f"0x{self.max_priority_fee_per_gas :0x}",
+            "maxPriorityFeePerGas": f"0x{self.max_priority_fee_per_gas:0x}",
             "nonce": f"0x{self.nonce:0x}",
             "value": f"0x{self.value:0x}",
             "data": f"0x{self.calldata.hex()}",
