@@ -241,7 +241,7 @@ class ZksyncEnv(NetworkEnv):
         return self._rpc.fetch("eth_getCode", [address, "latest"])
 
     def set_code(self, address: Address, bytecode: bytes):
-        return self._rpc.fetch("hardhat_setCode", [address, list(bytecode)])
+        return self._rpc.fetch("hardhat_setCode", [address, f"0x{bytecode.hex()}"])
 
     def generate_address(self, alias: Optional[str] = None) -> _AddressType:
         """
