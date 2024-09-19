@@ -14,6 +14,9 @@ def _javascript_call(js_func: str, *args, timeout_message: str) -> Any:
         if method == "evm_snapshot":
             return 1
 
+        if method == "eth_requestAccounts":
+            return [ZERO_ADDRESS]
+
         if method == "evm_revert":
             assert args[1:] == ([1],), f"Bad args passed to mock: {args}"
             return None
@@ -26,7 +29,7 @@ def _javascript_call(js_func: str, *args, timeout_message: str) -> Any:
 
         raise KeyError(args)
 
-    if js_func == "loadSigner":
+    if js_func in "loadSigner":
         return ZERO_ADDRESS
 
     raise KeyError(js_func)

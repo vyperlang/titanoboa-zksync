@@ -17,10 +17,9 @@ from requests import HTTPError
 
 from boa_zksync.deployer import ZksyncDeployer
 from boa_zksync.node import EraTestNode
-from boa_zksync.types import DeployTransaction, ZksyncComputation, ZksyncMessage
+from boa_zksync.types import DeployTransaction, ZksyncComputation, ZksyncMessage, ZERO_ADDRESS, \
+    CONTRACT_DEPLOYER_ADDRESS
 
-ZERO_ADDRESS = "0x0000000000000000000000000000000000000000"
-_CONTRACT_DEPLOYER_ADDRESS = "0x0000000000000000000000000000000000008006"
 with open(Path(__file__).parent / "IContractDeployer.json") as f:
     CONTRACT_DEPLOYER = ABIContractFactory.from_abi_dict(
         json.load(f), "ContractDeployer"
@@ -132,11 +131,11 @@ class ZksyncEnv(NetworkEnv):
                 "debug_traceCall",
                 [args.as_json_dict(), "latest", {"tracer": "callTracer"}],
             )
-            traced_computation = ZksyncComputation.from_call_trace(trace_call)
+            traced_computation = ZksyncComputation.from_call_trace(self, trace_call)
         except (RPCError, HTTPError):
             output = self._rpc.fetch("eth_call", [args.as_json_dict(), "latest"])
             traced_computation = ZksyncComputation(
-                args, bytes.fromhex(output.removeprefix("0x"))
+                self, args, bytes.fromhex(output.removeprefix("0x"))
             )
 
         if is_modifying:
@@ -147,11 +146,13 @@ class ZksyncEnv(NetworkEnv):
                     assert (
                         traced_computation.is_error == trace.is_error
                     ), f"VMError mismatch: {traced_computation.error} != {trace.error}"
-                    return ZksyncComputation.from_debug_trace(trace.raw_trace)
+                    return ZksyncComputation.from_debug_trace(self, trace.raw_trace)
 
             except _EstimateGasFailed:
                 if not traced_computation.is_error:  # trace gives more information
-                    return ZksyncComputation(args, error=VMError("Estimate gas failed"))
+                    return ZksyncComputation(
+                        self, args, error=VMError("Estimate gas failed")
+                    )
 
         return traced_computation
 
@@ -199,7 +200,7 @@ class ZksyncEnv(NetworkEnv):
         bytecode_hash = _hash_code(bytecode)
         tx = DeployTransaction(
             sender=sender,
-            to=_CONTRACT_DEPLOYER_ADDRESS,
+            to=CONTRACT_DEPLOYER_ADDRESS,
             gas=gas or 0,
             gas_price=gas_price,
             max_priority_fee_per_gas=kwargs.pop("max_priority_fee_per_gas", gas_price),

@@ -37,7 +37,7 @@ def test_from_debug_trace_nested():
             },
         ],
     }
-    assert ZksyncComputation.from_debug_trace(output).output == result
+    assert ZksyncComputation.from_debug_trace(boa.env, output).output == result
 
 
 def test_from_debug_trace_production_mode():
@@ -51,4 +51,4 @@ def test_from_debug_trace_production_mode():
         "calls": [],
         **_required_fields,
     }
-    assert ZksyncComputation.from_debug_trace(output).output == result
+    assert ZksyncComputation.from_debug_trace(boa.env, output).output == result

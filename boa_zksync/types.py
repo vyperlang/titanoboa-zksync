@@ -1,8 +1,9 @@
 from dataclasses import dataclass, field
 from functools import cached_property
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 import rlp
+from boa.contracts.call_trace import TraceFrame
 from boa.contracts.vyper.vyper_contract import VyperDeployer
 from boa.interpret import compiler_data
 from boa.rpc import fixup_dict, to_bytes, to_hex
@@ -14,6 +15,12 @@ from eth_account.messages import encode_typed_data
 from rlp.sedes import BigEndianInt, Binary, List
 from vyper.compiler import CompilerData
 from vyper.compiler.settings import OptimizationLevel
+
+if TYPE_CHECKING:
+    from boa_zksync import ZksyncEnv
+
+ZERO_ADDRESS = "0x0000000000000000000000000000000000000000"
+CONTRACT_DEPLOYER_ADDRESS = "0x0000000000000000000000000000000000008006"
 
 _EIP712_TYPE = bytes.fromhex("71")
 _EIP712_TYPES_SPEC = {
@@ -218,9 +225,14 @@ class ZksyncMessage:
     def as_tx_params(self):
         return self.as_json_dict(sender_field="from_")
 
+    @property
+    def is_create(self) -> bool:
+        return self.to == CONTRACT_DEPLOYER_ADDRESS
+
 
 @dataclass
 class ZksyncComputation:
+    env: "ZksyncEnv"
     msg: ZksyncMessage
     output: bytes | None = None
     error: VMError | None = None
@@ -231,7 +243,7 @@ class ZksyncComputation:
     value: int = 0
 
     @classmethod
-    def from_call_trace(cls, output: dict) -> "ZksyncComputation":
+    def from_call_trace(cls, env: "ZksyncEnv", output: dict) -> "ZksyncComputation":
         """Recursively constructs a ZksyncComputation from a debug_traceCall output."""
         error = None
         if output.get("error") is not None:
@@ -240,6 +252,7 @@ class ZksyncComputation:
             error = Revert(output["revertReason"])
 
         return cls(
+            env=env,
             msg=ZksyncMessage(
                 sender=Address(output["from"]),
                 to=Address(output["to"]),
@@ -249,7 +262,9 @@ class ZksyncComputation:
             ),
             output=to_bytes(output["output"]),
             error=error,
-            children=[cls.from_call_trace(call) for call in output.get("calls", [])],
+            children=[
+                cls.from_call_trace(env, call) for call in output.get("calls", [])
+            ],
             gas_used=int(output["gasUsed"], 16),
             revert_reason=output.get("revertReason"),
             type=output.get("type", "Call"),
@@ -257,7 +272,7 @@ class ZksyncComputation:
         )
 
     @classmethod
-    def from_debug_trace(cls, output: dict):
+    def from_debug_trace(cls, env: "ZksyncEnv", output: dict):
         """
         Finds the actual transaction computation, since zksync has system
         contract calls in the trace.
@@ -270,12 +285,12 @@ class ZksyncComputation:
                 if found := _find(trace["calls"]):
                     return found
                 if trace["to"] == to and trace["from"] == sender:
-                    return cls.from_call_trace(trace)
+                    return cls.from_call_trace(env, trace)
 
         if result := _find(output["calls"]):
             return result
         # in production mode the result is not always nested
-        return cls.from_call_trace(output)
+        return cls.from_call_trace(env, output)
 
     @property
     def is_success(self) -> bool:
@@ -302,3 +317,18 @@ class ZksyncComputation:
 
     def get_gas_used(self):
         return self.gas_used
+
+    @property
+    def net_gas_used(self) -> int:
+        return self.get_gas_used()
+
+    @property
+    def call_trace(self) -> TraceFrame:
+        return self._get_call_trace()
+
+    def _get_call_trace(self, depth=0) -> TraceFrame:
+        address = self.msg.to
+        contract = self.env.lookup_contract(address)
+        source = contract.trace_source(self) if contract else None
+        children = [child._get_call_trace(depth + 1) for child in self.children]
+        return TraceFrame(self, source, depth, children)
