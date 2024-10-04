@@ -144,7 +144,7 @@ class ZksyncEnv(NetworkEnv):
 
         if is_modifying:
             try:
-                receipt, trace = self._send_txn(**args.as_tx_params())
+                _, receipt, trace = self._send_txn(**args.as_tx_params())
                 self.last_receipt = receipt
                 if trace:
                     assert (
