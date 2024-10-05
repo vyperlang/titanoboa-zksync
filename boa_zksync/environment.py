@@ -21,7 +21,8 @@ from boa_zksync.types import (
     ZERO_ADDRESS,
     DeployTransaction,
     ZksyncComputation,
-    ZksyncMessage, DEFAULT_SALT,
+    ZksyncMessage,
+    DEFAULT_SALT,
 )
 
 with open(Path(__file__).parent / "IContractDeployer.json") as f:
@@ -144,7 +145,7 @@ class ZksyncEnv(NetworkEnv):
 
         if is_modifying:
             try:
-                _, receipt, trace = self._send_txn(**args.as_tx_params())
+                receipt, trace = self._send_txn(**args.as_tx_params())
                 self.last_receipt = receipt
                 if trace:
                     assert (

@@ -4,30 +4,7 @@ from boa import BoaError
 from boa.contracts.base_evm_contract import StackTrace
 from boa.contracts.call_trace import TraceFrame
 
-STARTING_SUPPLY = 100
-
-
-@pytest.fixture(scope="module")
-def simple_contract(zksync_env):
-    code = """
-totalSupply: public(uint256)
-balances: HashMap[address, uint256]
-
-@deploy
-def __init__(t: uint256):
-    self.totalSupply = t
-    self.balances[self] = t
-
-@external
-def update_total_supply(t: uint16) -> uint256:
-    self.totalSupply += convert(t, uint256)
-    return self.totalSupply
-
-@external
-def raise_exception(t: uint256):
-    raise "oh no!"
-"""
-    return boa.loads(code, STARTING_SUPPLY, name="SimpleContract")
+from tests.conftest import STARTING_SUPPLY
 
 
 def test_total_supply(simple_contract):
@@ -59,14 +36,8 @@ def create_child(blueprint: address, salt: bytes32, val: uint256) -> address:
         blueprint_code, name="Blueprint"
     ).deploy_as_blueprint()
     factory = boa.loads(factory_code, name="Factory")
-
     salt = b"\x00" * 32
-
     child_contract_address = factory.create_child(blueprint.address, salt, 5)
-
-    # assert child_contract_address == get_create2_address(
-    #     blueprint_bytecode, factory.address, salt
-    # ).some_function()
     child = boa.loads_partial(blueprint_code).at(child_contract_address)
     assert child.some_function() == 5
 
