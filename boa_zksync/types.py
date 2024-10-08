@@ -1,4 +1,4 @@
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from functools import cached_property
 from typing import TYPE_CHECKING, Optional
 
@@ -160,6 +160,31 @@ class DeployTransaction:
                 paymaster_type.serialize(self.paymaster_params or []),
             ]
         )
+
+    def to_dict(self) -> dict:
+        """
+        Convert the DeployTransaction instance to a dictionary.
+        """
+        # Use asdict to convert the dataclass to a dict
+        d = asdict(self)
+
+        # Convert bytes and list of bytes to hexadecimal strings
+        for key, value in d.items():
+            if isinstance(value, bytes):
+                d[key] = "0x" + value.hex()
+            elif isinstance(value, list) and all(
+                isinstance(item, bytes) for item in value
+            ):
+                d[key] = ["0x" + item.hex() for item in value]
+
+        # Handle the paymaster_params tuple specially
+        if d["paymaster_params"] is not None:
+            d["paymaster_params"] = {
+                "paymaster": "0x" + d["paymaster_params"][0].to_bytes(20, "big").hex(),
+                "paymaster_input": "0x" + d["paymaster_params"][1].hex(),
+            }
+
+        return d
 
 
 @dataclass

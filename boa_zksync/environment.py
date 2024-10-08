@@ -1,4 +1,6 @@
 from contextlib import contextmanager
+import time
+
 from functools import cached_property
 from hashlib import sha256
 from pathlib import Path
@@ -13,6 +15,11 @@ from boa.util.abi import Address
 from eth.exceptions import VMError
 from eth_account import Account
 from requests import HTTPError
+
+from boa.deployments import get_deployments_db, Deployment
+from boa.verifiers import get_verification_bundle
+
+import warnings
 
 from boa_zksync.deployer import ZksyncDeployer
 from boa_zksync.node import EraTestNode
@@ -145,7 +152,7 @@ class ZksyncEnv(NetworkEnv):
 
         if is_modifying:
             try:
-                receipt, trace = self._send_txn(**args.as_tx_params())
+                tx_data, receipt, trace = self._send_txn(**args.as_tx_params())
                 self.last_receipt = receipt
                 if trace:
                     assert (
@@ -171,6 +178,7 @@ class ZksyncEnv(NetworkEnv):
         dependency_bytecodes: Iterable[bytes] = (),
         salt=DEFAULT_SALT,
         max_priority_fee_per_gas=None,
+        contract=None,
         **kwargs,
     ) -> tuple[Address, bytes]:
         """
@@ -183,6 +191,7 @@ class ZksyncEnv(NetworkEnv):
         :param dependency_bytecodes: The bytecodes of the blueprints.
         :param salt: The salt for the contract deployment.
         :param max_priority_fee_per_gas: The max priority fee per gas for the transaction.
+        :param contract: The ZksyncContract that is being deployed.
         :param kwargs: Additional parameters for the transaction.
         :return: The address of the deployed contract and the bytecode hash.
         """
@@ -230,13 +239,51 @@ class ZksyncEnv(NetworkEnv):
         signature = tx.sign_typed_data(self._accounts[sender], estimated_gas)
         raw_tx = tx.rlp_encode(signature, estimated_gas)
 
+        broadcast_ts = time.time()
+
+        # Why do we do this over using _send_txn?
         tx_hash = self._rpc.fetch("eth_sendRawTransaction", ["0x" + raw_tx.hex()])
         print(f"tx broadcasted: {tx_hash}")
         receipt = self._rpc.wait_for_tx_receipt(tx_hash, self.tx_settings.poll_timeout)
         self.last_receipt = receipt
 
         print(f"{tx_hash} mined in block {receipt['blockHash']}!")
-        return Address(receipt["contractAddress"]), bytecode
+
+        create_address = Address(receipt["contractAddress"])
+
+        print(f"Contract deployed at {create_address}")
+
+        breakpoint()
+        if (deployments_db := get_deployments_db()) is not None:
+            contract_name = getattr(contract, "contract_name", None)
+            try:
+                source_bundle = get_verification_bundle(contract)
+            except Exception as e:
+                # there was a problem constructing the verification bundle.
+                # assume the user cares more about continuing, than getting
+                # the bundle into the db
+                msg = "While saving deployment data, couldn't construct"
+                msg += f" verification bundle for {contract_name}! Full stack"
+                msg += f" trace:\n```\n{e}\n```\nContinuing.\n"
+                warnings.warn(msg, stacklevel=2)
+                source_bundle = None
+            abi = getattr(contract, "abi", None)
+
+            deployment_data = Deployment(
+                create_address,
+                contract_name,
+                self._rpc.name,
+                sender,
+                receipt["transactionHash"],
+                broadcast_ts,
+                tx.to_dict(),
+                receipt,
+                source_bundle,
+                abi,
+            )
+            deployments_db.insert_deployment(deployment_data)
+
+        return create_address, bytecode
 
     def get_code(self, address: Address) -> bytes:
         return self._rpc.fetch("eth_getCode", [address, "latest"])
@@ -268,6 +315,11 @@ class ZksyncEnv(NetworkEnv):
 
     def set_balance(self, addr: Address, value: int):
         self._rpc.fetch("hardhat_setBalance", [addr, to_hex(value)])
+
+    # Override
+    @classmethod
+    def from_url(cls, url: str, nickname=None) -> "NetworkEnv":
+        return cls(EthereumRPC(url), nickname=nickname)
 
 
 def _hash_code(bytecode: bytes) -> bytes:

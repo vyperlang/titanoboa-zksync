@@ -7,6 +7,7 @@ from eth_account import Account
 import boa_zksync
 from boa_zksync import EraTestNode
 from boa_zksync.deployer import ZksyncDeployer
+from boa.deployments import DeploymentsDB, set_deployments_db
 
 STARTING_SUPPLY = 100
 
@@ -65,7 +66,21 @@ def raise_exception(t: uint256):
 
 
 @pytest.fixture(scope="module")
-def zksync_deployer(zksync_env) -> ZksyncDeployer:
+def zksync_env_with_db(account):
+    old_env = boa.env
+    boa_zksync.set_zksync_test_env()
+    boa.env.add_account(account, force_eoa=True)
+
+    db = DeploymentsDB(":memory:")
+
+    with set_deployments_db(db):
+        yield boa.env
+
+    boa.set_env(old_env)
+
+
+@pytest.fixture(scope="module")
+def zksync_deployer(zksync_env_with_db) -> ZksyncDeployer:
     from tests.data import Counter
 
     return Counter

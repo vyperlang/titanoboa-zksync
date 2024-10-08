@@ -17,7 +17,7 @@ classifiers = [
 ]
 
 dependencies = [
-    "titanoboa>=0.2.2",
+    "titanoboa @ git+https://github.com/charles-cooper/titanoboa.git@feat/deployments-abi",
 ]
 
 [project.optional-dependencies]
