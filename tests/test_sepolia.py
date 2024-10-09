@@ -2,6 +2,7 @@ import boa
 import pytest
 from boa.rpc import EthereumRPC
 
+import boa_zksync
 from boa_zksync import EraTestNode
 from boa_zksync.environment import ZERO_ADDRESS
 
@@ -38,3 +39,12 @@ def set_implementation(_implementation: address):
 def test_fork_rpc(zksync_sepolia_fork):
     assert isinstance(boa.env._rpc, EraTestNode)
     assert isinstance(boa.env._rpc.inner_rpc, EthereumRPC)
+
+
+@pytest.mark.ignore_isolation
+def test_real_deploy_and_verify(zksync_sepolia_env):
+    from tests.data import Counter
+    contract = Counter.deploy()
+    verify = boa_zksync.verify(contract)
+    verify.wait_for_verification()
+    assert verify.is_verified()

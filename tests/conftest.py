@@ -10,6 +10,8 @@ from boa_zksync import EraTestNode
 from boa_zksync.deployer import ZksyncDeployer
 
 STARTING_SUPPLY = 100
+ZKSYNC_SEPOLIA_RPC_URL = os.getenv("ZKSYNC_SEPOLIA_RPC_URL", "https://sepolia.era.zksync.dev")
+ZKSYNC_SEPOLIA_EXPLORER_URL = os.getenv("ZKSYNC_SEPOLIA_EXPLORER_URL", "https://explorer.sepolia.era.zksync.dev")
 
 
 @pytest.fixture(scope="module")
@@ -24,15 +26,29 @@ def zksync_env(account):
 @pytest.fixture(scope="module")
 def zksync_sepolia_fork(account):
     old_env = boa.env
-    fork_url = os.getenv("FORK_URL", "https://sepolia.era.zksync.dev")
     boa_zksync.set_zksync_fork(
-        fork_url,
+        ZKSYNC_SEPOLIA_RPC_URL,
         block_identifier=3000000,
         node_args=("--show-calls", "all", "--show-outputs", "true"),
     )
     boa.env.add_account(account, force_eoa=True)
     yield boa.env
     boa.set_env(old_env)
+
+
+@pytest.fixture(scope="module")
+def zksync_sepolia_env():
+    key = os.getenv("SEPOLIA_PKEY")
+    if not key:
+        return pytest.skip("SEPOLIA_PKEY is not set, skipping test")
+
+    old_env = boa.env
+    boa_zksync.set_zksync_env(ZKSYNC_SEPOLIA_RPC_URL, ZKSYNC_SEPOLIA_EXPLORER_URL)
+    try:
+        boa.env.add_account(Account.from_key(key))
+        yield
+    finally:
+        boa.set_env(old_env)
 
 
 @pytest.fixture(scope="module")

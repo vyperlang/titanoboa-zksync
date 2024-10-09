@@ -22,6 +22,7 @@ from boa_zksync.types import ZksyncCompilerData
 
 if TYPE_CHECKING:
     from boa_zksync import ZksyncEnv
+    from boa_zksync.deployer import ZksyncDeployer
 
 
 class ZksyncContract(ABIContract):
@@ -78,14 +79,14 @@ class ZksyncContract(ABIContract):
         self.env.register_contract(address, self)
 
     def _run_init(self, *args, value=0, override_address=None, gas=None):
-        constructor_calldata = self._ctor.prepare_calldata(*args) if self._ctor else b""
+        self.constructor_calldata = self._ctor.prepare_calldata(*args) if self._ctor else b""
         address, bytecode = self.env.deploy_code(
             override_address=override_address,
             gas=gas,
             contract=self,
             bytecode=self.compiler_data.bytecode,
             value=value,
-            constructor_calldata=constructor_calldata,
+            constructor_calldata=self.constructor_calldata,
         )
         self.bytecode = bytecode
         return address
@@ -110,7 +111,7 @@ class ZksyncContract(ABIContract):
             yield
 
     @cached_property
-    def deployer(self):
+    def deployer(self) -> "ZksyncDeployer":
         from boa_zksync.deployer import ZksyncDeployer
 
         return ZksyncDeployer(

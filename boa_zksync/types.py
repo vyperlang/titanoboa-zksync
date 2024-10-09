@@ -15,6 +15,7 @@ from eth.exceptions import Revert, VMError
 from eth_account import Account
 from eth_account.datastructures import SignedMessage
 from eth_account.messages import encode_typed_data
+from packaging.version import Version
 from rlp.sedes import BigEndianInt, Binary, List
 from vyper.compiler import CompilerData
 from vyper.compiler.settings import OptimizationLevel
@@ -233,6 +234,7 @@ class ZksyncCompilerData:
 
     contract_name: str
     source_code: str
+    zkvyper_version: Version
     compiler_args: list[str]
     bytecode: bytes
     method_identifiers: dict

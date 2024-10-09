@@ -87,9 +87,12 @@ class ZksyncDeployer(ABIContractFactory):
         return env
 
     @cached_property
-    def solc_json(self):
+    def solc_json(self) -> dict:
         """
         A ZKsync compatible solc-json. Generates a solc "standard json" representation
         of the Vyper contract.
         """
-        return build_solc_json(self.zkvyper_data.vyper)
+        return {
+            "zkvyper_version": self.zkvyper_data.zkvyper_version,
+            **build_solc_json(self.zkvyper_data.vyper),
+        }
