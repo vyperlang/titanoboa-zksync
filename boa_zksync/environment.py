@@ -1,12 +1,12 @@
-from contextlib import contextmanager
 import time
-
+from contextlib import contextmanager
 from functools import cached_property
 from hashlib import sha256
 from pathlib import Path
 from typing import Any, Iterable, Optional, Type
 
 from boa.contracts.abi.abi_contract import ABIContract, ABIContractFactory
+from boa.deployments import get_deployments_db
 from boa.environment import _AddressType
 from boa.interpret import json
 from boa.network import NetworkEnv, _EstimateGasFailed
@@ -15,11 +15,6 @@ from boa.util.abi import Address
 from eth.exceptions import VMError
 from eth_account import Account
 from requests import HTTPError
-
-from boa.deployments import get_deployments_db, Deployment
-from boa.verifiers import get_verification_bundle
-
-import warnings
 
 from boa_zksync.deployer import ZksyncDeployer
 from boa_zksync.node import EraTestNode
@@ -168,6 +163,9 @@ class ZksyncEnv(NetworkEnv):
 
         return traced_computation
 
+    def deploy(self, *args, **kwargs):
+        raise NotImplementedError("Please use `deploy_code` instead")
+
     def deploy_code(
         self,
         sender=None,
@@ -253,33 +251,9 @@ class ZksyncEnv(NetworkEnv):
 
         print(f"Contract deployed at {create_address}")
 
-        breakpoint()
         if (deployments_db := get_deployments_db()) is not None:
-            contract_name = getattr(contract, "contract_name", None)
-            try:
-                source_bundle = get_verification_bundle(contract)
-            except Exception as e:
-                # there was a problem constructing the verification bundle.
-                # assume the user cares more about continuing, than getting
-                # the bundle into the db
-                msg = "While saving deployment data, couldn't construct"
-                msg += f" verification bundle for {contract_name}! Full stack"
-                msg += f" trace:\n```\n{e}\n```\nContinuing.\n"
-                warnings.warn(msg, stacklevel=2)
-                source_bundle = None
-            abi = getattr(contract, "abi", None)
-
-            deployment_data = Deployment(
-                create_address,
-                contract_name,
-                self._rpc.name,
-                sender,
-                receipt["transactionHash"],
-                broadcast_ts,
-                tx.to_dict(),
-                receipt,
-                source_bundle,
-                abi,
+            deployment_data = tx.to_deployment(
+                contract, receipt, broadcast_ts, create_address, self._rpc.name
             )
             deployments_db.insert_deployment(deployment_data)
 

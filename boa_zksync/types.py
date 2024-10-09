@@ -1,3 +1,4 @@
+import warnings
 from dataclasses import asdict, dataclass, field
 from functools import cached_property
 from typing import TYPE_CHECKING, Optional
@@ -5,9 +6,11 @@ from typing import TYPE_CHECKING, Optional
 import rlp
 from boa.contracts.call_trace import TraceFrame
 from boa.contracts.vyper.vyper_contract import VyperDeployer
+from boa.deployments import Deployment
 from boa.interpret import compiler_data
 from boa.rpc import fixup_dict, to_bytes, to_hex
 from boa.util.abi import Address
+from boa.verifiers import get_verification_bundle
 from eth.exceptions import Revert, VMError
 from eth_account import Account
 from eth_account.datastructures import SignedMessage
@@ -18,6 +21,8 @@ from vyper.compiler.settings import OptimizationLevel
 
 if TYPE_CHECKING:
     from boa_zksync import ZksyncEnv
+    from boa_zksync.contract import ZksyncContract
+
 
 ZERO_ADDRESS = "0x0000000000000000000000000000000000000000"
 CONTRACT_DEPLOYER_ADDRESS = "0x0000000000000000000000000000000000008006"
@@ -185,6 +190,39 @@ class DeployTransaction:
             }
 
         return d
+
+    def to_deployment(
+        self,
+        contract: "ZksyncContract",
+        receipt: dict,
+        broadcast_ts: float,
+        create_address: Address,
+        rpc: str,
+    ):
+        contract_name = getattr(contract, "contract_name", None)
+        try:
+            source_bundle = get_verification_bundle(contract)
+        except Exception as e:
+            # there was a problem constructing the verification bundle.
+            # assume the user cares more about continuing, than getting
+            # the bundle into the db
+            msg = "While saving deployment data, couldn't construct"
+            msg += f" verification bundle for {contract_name}! Full stack"
+            msg += f" trace:\n```\n{e}\n```\nContinuing.\n"
+            warnings.warn(msg, stacklevel=2)
+            source_bundle = None
+        return Deployment(
+            contract_address=create_address,
+            contract_name=contract_name,
+            rpc=rpc,
+            deployer=Address(self.sender),
+            tx_hash=receipt["transactionHash"],
+            broadcast_ts=broadcast_ts,
+            tx_dict=self.to_dict(),
+            receipt_dict=receipt,
+            source_code=source_bundle,
+            abi=getattr(contract, "abi", None),
+        )
 
 
 @dataclass

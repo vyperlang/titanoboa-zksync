@@ -1,8 +1,9 @@
 import textwrap
 from contextlib import contextmanager
+from typing import TYPE_CHECKING, Optional
 
+from boa import Env
 from boa.contracts.abi.abi_contract import ABIContract, ABIFunction
-from boa.environment import Env
 from boa.contracts.vyper.vyper_contract import VyperContract
 from boa.rpc import to_bytes, to_int
 from boa.util.abi import Address
@@ -17,7 +18,9 @@ from boa_zksync.compiler_utils import (
     generate_source_for_arbitrary_stmt,
     generate_source_for_internal_fn,
 )
-from boa_zksync.types import ZksyncCompilerData, DEFAULT_SALT
+from boa_zksync.types import ZksyncCompilerData
+if TYPE_CHECKING:
+    from boa_zksync import ZksyncEnv
 
 
 class ZksyncContract(ABIContract):
@@ -28,40 +31,55 @@ class ZksyncContract(ABIContract):
     def __init__(
         self,
         compiler_data: ZksyncCompilerData,
+        name: str,
+        functions: list[ABIFunction],
         *args,
-        name="VyperContract",
-        abi=None,
-        functions=None,
-        filename=None,
-        address=None,
         value=0,
-        env: Env = None,
+        env: "ZksyncEnv" = None,
+        override_address: Address = None,
+        # whether to skip constructor
+        skip_initcode=False,
+        created_from: Address = None,
+        filename: str = None,
         gas=None,
-        dependency_bytecodes=(),
-        salt=DEFAULT_SALT,
-        constructor_calldata=b"",
-        max_priority_fee_per_gas=None,
-        **kwargs,
     ):
         self.compiler_data = compiler_data
-        self.env = env or Env.get_singleton()
+        self.created_from = created_from
+        self._abi = compiler_data.abi
+        self.env = Env.get_singleton() if env is None else env
         self.filename = filename
-
-        if address is None:
-            address, _ = self.env.deploy_code(
-                bytecode=self.compiler_data.bytecode,
-                value=value,
-                gas=gas,
-                dependency_bytecodes=dependency_bytecodes,
-                salt=salt,
-                max_priority_fee_per_gas=max_priority_fee_per_gas,
-                # TODO: Users shouldn't have to pass this in, the args should be converted
-                # We should get the constructor from the deployer
-                constructor_calldata=constructor_calldata,
-                contract=self,
+        if skip_initcode:
+            if value:
+                raise Exception("nonzero value but initcode is being skipped")
+            address = Address(override_address)
+        else:
+            address = self._run_init(
+                *args, value=value, override_address=override_address, gas=gas
             )
-        super().__init__(name, abi, functions, address)
-        self.env.register_contract(address, self)
+        super().__init__(name=name, abi=compiler_data.abi, functions=functions, address=address, filename=filename, env=env)
+
+    def _run_init(self, *args, value=0, override_address=None, gas=None):
+        constructor_calldata = self._ctor.prepare_calldata(*args) if self._ctor else b""
+        address, bytecode = self.env.deploy_code(
+            override_address=override_address,
+            gas=gas,
+            contract=self,
+            bytecode=self.compiler_data.bytecode,
+            value=value,
+            constructor_calldata=constructor_calldata,
+        )
+        self.bytecode = bytecode
+        return address
+
+    @cached_property
+    def _ctor(self) -> Optional[ABIFunction]:
+        """
+        Get the constructor function of the contract.
+        :raises: StopIteration if the constructor is not found.
+        """
+        ctor_abi = next((i for i in self.abi if i["type"] == "constructor"), None)
+        if ctor_abi:
+            return ABIFunction(ctor_abi, contract_name=self.contract_name)
 
     def eval(self, code):
         return ZksyncEval(code, self)()
@@ -74,8 +92,11 @@ class ZksyncContract(ABIContract):
     @cached_property
     def deployer(self):
         from boa_zksync.deployer import ZksyncDeployer
-
-        return ZksyncDeployer(self.compiler_data, filename=self.filename)
+        return ZksyncDeployer(
+            self.compiler_data.vyper,
+            filename=self.filename,
+            zkvyper_data=self.compiler_data
+        )
 
     @cached_property
     def vyper_contract(self):

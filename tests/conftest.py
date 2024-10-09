@@ -70,10 +70,7 @@ def zksync_env_with_db(account):
     old_env = boa.env
     boa_zksync.set_zksync_test_env()
     boa.env.add_account(account, force_eoa=True)
-
-    db = DeploymentsDB(":memory:")
-
-    with set_deployments_db(db):
+    with set_deployments_db(db=DeploymentsDB()):
         yield boa.env
 
     boa.set_env(old_env)

@@ -29,7 +29,7 @@ def _javascript_call(js_func: str, *args, timeout_message: str) -> Any:
 
         raise KeyError(args)
 
-    if js_func in "loadSigner":
+    if js_func == "loadSigner":
         return ZERO_ADDRESS
 
     raise KeyError(js_func)
