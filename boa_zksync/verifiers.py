@@ -8,7 +8,7 @@ import requests
 from boa.util.abi import Address
 from boa.verifiers import VerificationResult
 
-DEFAULT_ZKSYNC_EXPLORER_URI = "https://zksync2-mainnet-explorer.zksync.io",
+DEFAULT_ZKSYNC_EXPLORER_URI = "https://zksync2-mainnet-explorer.zksync.io"
 
 
 @dataclass
@@ -50,13 +50,15 @@ class ZksyncExplorer:
         url = f"{self.uri}/contract_verification"
         body = {
             "contractAddress": address,
-            "sourceCode": {name: asset["content"] for name, asset in solc_json["sources"].items()},
+            "sourceCode": {
+                name: asset["content"] for name, asset in solc_json["sources"].items()
+            },
             "codeFormat": "vyper-multi-file",
             "contractName": contract_name,
             "compilerVyperVersion": solc_json["compiler_version"],
             "compilerZkvyperVersion": solc_json["zkvyper_version"],
             "constructorArguments": f"0x{constructor_calldata.hex()}",
-            "optimizationUsed": True,  # hardcoded in hardhat for some reason: https://github.com/matter-labs/hardhat-zksync/blob/187722e/packages/hardhat-zksync-verify-vyper/src/task-actions.ts#L110
+            "optimizationUsed": True,  # hardcoded in hardhat for some reason: https://github.com/matter-labs/hardhat-zksync/blob/187722e/packages/hardhat-zksync-verify-vyper/src/task-actions.ts#L110  # noqa: E501
         }
 
         response = requests.post(url, json=body)

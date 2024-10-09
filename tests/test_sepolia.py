@@ -44,6 +44,7 @@ def test_fork_rpc(zksync_sepolia_fork):
 @pytest.mark.ignore_isolation
 def test_real_deploy_and_verify(zksync_sepolia_env):
     from tests.data import Counter
+
     contract = Counter.deploy()
     verify = boa_zksync.verify(contract)
     verify.wait_for_verification()

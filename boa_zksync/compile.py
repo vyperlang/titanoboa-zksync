@@ -20,10 +20,7 @@ def compile_zksync(
     compiler_args = compiler_args or []
 
     result = _run_zkvyper(
-        "--vyper", vyper_path,
-        "-f", "combined_json",
-        *compiler_args,
-        "--", filename,
+        "--vyper", vyper_path, "-f", "combined_json", *compiler_args, "--", filename
     )
     output = json.loads(result)
 
@@ -39,7 +36,7 @@ def compile_zksync(
         _get_zkvyper_version(),
         compiler_args,
         bytecode,
-        **compile_output
+        **compile_output,
     )
 
 

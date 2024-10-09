@@ -10,8 +10,12 @@ from boa_zksync import EraTestNode
 from boa_zksync.deployer import ZksyncDeployer
 
 STARTING_SUPPLY = 100
-ZKSYNC_SEPOLIA_RPC_URL = os.getenv("ZKSYNC_SEPOLIA_RPC_URL", "https://sepolia.era.zksync.dev")
-ZKSYNC_SEPOLIA_EXPLORER_URL = os.getenv("ZKSYNC_SEPOLIA_EXPLORER_URL", "https://explorer.sepolia.era.zksync.dev")
+ZKSYNC_SEPOLIA_RPC_URL = os.getenv(
+    "ZKSYNC_SEPOLIA_RPC_URL", "https://sepolia.era.zksync.dev"
+)
+ZKSYNC_SEPOLIA_EXPLORER_URL = os.getenv(
+    "ZKSYNC_SEPOLIA_EXPLORER_URL", "https://explorer.sepolia.era.zksync.dev"
+)
 
 
 @pytest.fixture(scope="module")

@@ -79,7 +79,9 @@ class ZksyncContract(ABIContract):
         self.env.register_contract(address, self)
 
     def _run_init(self, *args, value=0, override_address=None, gas=None):
-        self.constructor_calldata = self._ctor.prepare_calldata(*args) if self._ctor else b""
+        self.constructor_calldata = (
+            self._ctor.prepare_calldata(*args) if self._ctor else b""
+        )
         address, bytecode = self.env.deploy_code(
             override_address=override_address,
             gas=gas,

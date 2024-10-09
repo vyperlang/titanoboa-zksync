@@ -38,9 +38,7 @@ boa.set_zksync_fork = set_zksync_fork
 boa.set_zksync_browser_env = set_zksync_browser_env
 
 
-def verify(
-    contract: ZksyncContract, verifier=None, **kwargs
-) -> VerificationResult:
+def verify(contract: ZksyncContract, verifier=None, **kwargs) -> VerificationResult:
     verifier = verifier or get_verifier()
     return verifier.verify(
         address=contract.address,
