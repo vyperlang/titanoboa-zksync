@@ -9,7 +9,7 @@ from vyper.compiler import CompilerData
 from vyper.compiler.output import build_solc_json
 
 from boa_zksync.compile import compile_zksync, compile_zksync_source
-from boa_zksync.contract import ZksyncContract
+from boa_zksync.contract import ZksyncContract, ZksyncBlueprint
 from boa_zksync.types import ZksyncCompilerData
 
 if TYPE_CHECKING:
@@ -52,17 +52,16 @@ class ZksyncDeployer(ABIContractFactory):
         """
         Create an ABI contract object for a deployed contract at `address`.
         """
-        address = Address(address)
-        contract = self.deploy(override_address=address, skip_initcode=True)
-        contract.env.register_contract(address, contract)
-        return contract
+        return self.deploy(override_address=Address(address), skip_initcode=True)
 
-    def deploy_as_blueprint(self, *args, **kwargs) -> ZksyncContract:
+    def deploy_as_blueprint(self, **kwargs) -> ZksyncContract:
         """
         In zkSync, any contract can be used as a blueprint.
-        Note that we do need constructor arguments for deploying a blueprint.
+        The only difference here is that we don't need to run the constructor.
         """
-        return self.deploy(*args, **kwargs)
+        return ZksyncBlueprint(
+            self.zkvyper_data, self._name, self.functions, filename=self.filename, **kwargs
+        )
 
     @property
     def env(self) -> "ZksyncEnv":

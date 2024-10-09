@@ -45,9 +45,17 @@ class ZksyncContract(ABIContract):
     ):
         self.compiler_data = compiler_data
         self.created_from = created_from
+
+        # we duplicate the following setters from the base contract, because the
+        # ABI contract currently reads the bytecode from the env on init.
+        # However, the zk contract is not yet deployed at this point.
+        # for the deployment, these values are needed, so we set them here.
         self._abi = compiler_data.abi
         self.env = Env.get_singleton() if env is None else env
         self.filename = filename
+        self.contract_name = name
+
+        # run the constructor if not skipping
         if skip_initcode:
             if value:
                 raise Exception("nonzero value but initcode is being skipped")
@@ -56,7 +64,10 @@ class ZksyncContract(ABIContract):
             address = self._run_init(
                 *args, value=value, override_address=override_address, gas=gas
             )
+
+        # only now initialize the ABI contract
         super().__init__(name=name, abi=compiler_data.abi, functions=functions, address=address, filename=filename, env=env)
+        self.env.register_contract(address, self)
 
     def _run_init(self, *args, value=0, override_address=None, gas=None):
         constructor_calldata = self._ctor.prepare_calldata(*args) if self._ctor else b""
@@ -152,6 +163,16 @@ class ZksyncContract(ABIContract):
             event = (index, address.canonical_address, topics, data)
             ret.append(c.decode_log(event))
         return ret
+
+
+class ZksyncBlueprint(ZksyncContract):
+    """
+    In zkSync, any contract can be used as a blueprint.
+    The only difference here is that we don't need to run the constructor.
+    """
+    @property
+    def _ctor(self) -> Optional[ABIFunction]:
+        return None
 
 
 class _ZksyncInternal(ABIFunction):
