@@ -10,8 +10,6 @@ from boa.rpc import to_bytes
 from boa_zksync.compiler_utils import get_compiler_output
 from boa_zksync.types import ZksyncCompilerData
 
-import warnings
-
 
 def compile_zksync(
     contract_name: str, filename: str, compiler_args=None, source_code=None

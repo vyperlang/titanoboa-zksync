@@ -20,11 +20,11 @@ from boa_zksync.deployer import ZksyncDeployer
 from boa_zksync.node import EraTestNode
 from boa_zksync.types import (
     CONTRACT_DEPLOYER_ADDRESS,
+    DEFAULT_SALT,
     ZERO_ADDRESS,
     DeployTransaction,
     ZksyncComputation,
     ZksyncMessage,
-    DEFAULT_SALT,
 )
 
 with open(Path(__file__).parent / "IContractDeployer.json") as f:

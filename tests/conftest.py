@@ -2,12 +2,12 @@ import os
 
 import boa
 import pytest
+from boa.deployments import DeploymentsDB, set_deployments_db
 from eth_account import Account
 
 import boa_zksync
 from boa_zksync import EraTestNode
 from boa_zksync.deployer import ZksyncDeployer
-from boa.deployments import DeploymentsDB, set_deployments_db
 
 STARTING_SUPPLY = 100
 

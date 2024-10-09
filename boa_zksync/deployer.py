@@ -9,7 +9,7 @@ from vyper.compiler import CompilerData
 from vyper.compiler.output import build_solc_json
 
 from boa_zksync.compile import compile_zksync, compile_zksync_source
-from boa_zksync.contract import ZksyncContract, ZksyncBlueprint
+from boa_zksync.contract import ZksyncBlueprint, ZksyncContract
 from boa_zksync.types import ZksyncCompilerData
 
 if TYPE_CHECKING:
@@ -45,7 +45,12 @@ class ZksyncDeployer(ABIContractFactory):
 
     def deploy(self, *args, **kwargs) -> ZksyncContract:
         return ZksyncContract(
-            self.zkvyper_data, self._name, self.functions, *args, filename=self.filename, **kwargs
+            self.zkvyper_data,
+            self._name,
+            self.functions,
+            *args,
+            filename=self.filename,
+            **kwargs,
         )
 
     def at(self, address: Address | str) -> ZksyncContract:
@@ -60,7 +65,11 @@ class ZksyncDeployer(ABIContractFactory):
         The only difference here is that we don't need to run the constructor.
         """
         return ZksyncBlueprint(
-            self.zkvyper_data, self._name, self.functions, filename=self.filename, **kwargs
+            self.zkvyper_data,
+            self._name,
+            self.functions,
+            filename=self.filename,
+            **kwargs,
         )
 
     @property

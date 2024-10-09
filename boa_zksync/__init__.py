@@ -9,7 +9,9 @@ def set_zksync_env(url, nickname=None):
 
 
 def set_zksync_test_env(node_args=(), nickname=None):
-    return boa.set_env(ZksyncEnv(rpc=EraTestNode(node_args=node_args), nickname=nickname))
+    return boa.set_env(
+        ZksyncEnv(rpc=EraTestNode(node_args=node_args), nickname=nickname)
+    )
 
 
 def set_zksync_fork(url, nickname=None, *args, **kwargs):

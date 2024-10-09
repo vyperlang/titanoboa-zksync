@@ -19,6 +19,7 @@ from boa_zksync.compiler_utils import (
     generate_source_for_internal_fn,
 )
 from boa_zksync.types import ZksyncCompilerData
+
 if TYPE_CHECKING:
     from boa_zksync import ZksyncEnv
 
@@ -66,7 +67,14 @@ class ZksyncContract(ABIContract):
             )
 
         # only now initialize the ABI contract
-        super().__init__(name=name, abi=compiler_data.abi, functions=functions, address=address, filename=filename, env=env)
+        super().__init__(
+            name=name,
+            abi=compiler_data.abi,
+            functions=functions,
+            address=address,
+            filename=filename,
+            env=env,
+        )
         self.env.register_contract(address, self)
 
     def _run_init(self, *args, value=0, override_address=None, gas=None):
@@ -89,8 +97,9 @@ class ZksyncContract(ABIContract):
         :raises: StopIteration if the constructor is not found.
         """
         ctor_abi = next((i for i in self.abi if i["type"] == "constructor"), None)
-        if ctor_abi:
-            return ABIFunction(ctor_abi, contract_name=self.contract_name)
+        if ctor_abi is None:
+            return None
+        return ABIFunction(ctor_abi, contract_name=self.contract_name)
 
     def eval(self, code):
         return ZksyncEval(code, self)()
@@ -103,10 +112,11 @@ class ZksyncContract(ABIContract):
     @cached_property
     def deployer(self):
         from boa_zksync.deployer import ZksyncDeployer
+
         return ZksyncDeployer(
             self.compiler_data.vyper,
             filename=self.filename,
-            zkvyper_data=self.compiler_data
+            zkvyper_data=self.compiler_data,
         )
 
     @cached_property
@@ -170,6 +180,7 @@ class ZksyncBlueprint(ZksyncContract):
     In zkSync, any contract can be used as a blueprint.
     The only difference here is that we don't need to run the constructor.
     """
+
     @property
     def _ctor(self) -> Optional[ABIFunction]:
         return None
