@@ -1,3 +1,4 @@
+import re
 import time
 from dataclasses import dataclass
 from datetime import datetime, timedelta
@@ -48,14 +49,18 @@ class ZksyncExplorer:
                      or wait for verification to complete. Defaults to False
         """
         url = f"{self.uri}/contract_verification"
+
+        # note: only pass the first three digits of the version, as that's what the explorer expects
+        version, = re.search(r"(\d+\.\d+\.\d+)", solc_json["compiler_version"]).groups()
         body = {
             "contractAddress": address,
             "sourceCode": {
-                name: asset["content"] for name, asset in solc_json["sources"].items()
+                contract_name if name == "<unknown>" else name: asset["content"]
+                for name, asset in solc_json["sources"].items()
             },
             "codeFormat": "vyper-multi-file",
             "contractName": contract_name,
-            "compilerVyperVersion": solc_json["compiler_version"],
+            "compilerVyperVersion": version,
             "compilerZkvyperVersion": solc_json["zkvyper_version"],
             "constructorArguments": f"0x{constructor_calldata.hex()}",
             "optimizationUsed": True,  # hardcoded in hardhat for some reason: https://github.com/matter-labs/hardhat-zksync/blob/187722e/packages/hardhat-zksync-verify-vyper/src/task-actions.ts#L110  # noqa: E501
