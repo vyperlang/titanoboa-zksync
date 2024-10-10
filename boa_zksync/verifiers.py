@@ -50,8 +50,6 @@ class ZksyncExplorer:
         """
         url = f"{self.uri}/contract_verification"
 
-        # note: only pass the first three digits of the version, as that's what the explorer expects
-        version, = re.search(r"(\d+\.\d+\.\d+)", solc_json["compiler_version"]).groups()
         body = {
             "contractAddress": address,
             "sourceCode": {
@@ -60,10 +58,13 @@ class ZksyncExplorer:
             },
             "codeFormat": "vyper-multi-file",
             "contractName": contract_name,
-            "compilerVyperVersion": version,
+            "compilerVyperVersion": self._extract_version(
+                solc_json["compiler_version"]
+            ),
             "compilerZkvyperVersion": solc_json["zkvyper_version"],
             "constructorArguments": f"0x{constructor_calldata.hex()}",
-            "optimizationUsed": True,  # hardcoded in hardhat for some reason: https://github.com/matter-labs/hardhat-zksync/blob/187722e/packages/hardhat-zksync-verify-vyper/src/task-actions.ts#L110  # noqa: E501
+            "optimizationUsed": True,
+            # hardcoded in hardhat for some reason: https://github.com/matter-labs/hardhat-zksync/blob/187722e/packages/hardhat-zksync-verify-vyper/src/task-actions.ts#L110  # noqa: E501
         }
 
         response = requests.post(url, json=body)
@@ -76,6 +77,13 @@ class ZksyncExplorer:
 
         self.wait_for_verification(verification_id)
         return None
+
+    @staticmethod
+    def _extract_version(version: str):
+        # we only pass the first three digits of the version, as that's what the explorer expects
+        match = re.search(r"(\d+\.\d+\.\d+)", version)
+        assert match is not None, f"Could not extract version from {version}"
+        return match.group(0)
 
     def wait_for_verification(self, verification_id: str) -> None:
         """
