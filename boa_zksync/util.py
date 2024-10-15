@@ -58,7 +58,7 @@ def install_zkvyper_compiler(
 
 
 def install_era_test_node(
-    source="https://github.com/matter-labs/era-test-node/releases/download/v0.1.0-alpha.27/era_test_node-v0.1.0-alpha.27-x86_64-unknown-linux-gnu.tar.gz",  # noqa: E501
+    source="https://github.com/matter-labs/era-test-node/releases/download/v0.1.0-alpha.29/era_test_node-v0.1.0-alpha.29-x86_64-unknown-linux-gnu.tar.gz",  # noqa: E501
     destination="/usr/local/bin/era_test_node",
 ):
     """
