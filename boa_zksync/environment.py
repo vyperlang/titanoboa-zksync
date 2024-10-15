@@ -1,3 +1,4 @@
+import time
 from contextlib import contextmanager
 from functools import cached_property
 from hashlib import sha256
@@ -5,6 +6,7 @@ from pathlib import Path
 from typing import Any, Iterable, Optional, Type
 
 from boa.contracts.abi.abi_contract import ABIContract, ABIContractFactory
+from boa.deployments import get_deployments_db
 from boa.environment import _AddressType
 from boa.interpret import json
 from boa.network import NetworkEnv, _EstimateGasFailed
@@ -18,10 +20,11 @@ from boa_zksync.deployer import ZksyncDeployer
 from boa_zksync.node import EraTestNode
 from boa_zksync.types import (
     CONTRACT_DEPLOYER_ADDRESS,
+    DEFAULT_SALT,
     ZERO_ADDRESS,
     DeployTransaction,
     ZksyncComputation,
-    ZksyncMessage, DEFAULT_SALT,
+    ZksyncMessage,
 )
 
 with open(Path(__file__).parent / "IContractDeployer.json") as f:
@@ -144,7 +147,7 @@ class ZksyncEnv(NetworkEnv):
 
         if is_modifying:
             try:
-                receipt, trace = self._send_txn(**args.as_tx_params())
+                tx_data, receipt, trace = self._send_txn(**args.as_tx_params())
                 self.last_receipt = receipt
                 if trace:
                     assert (
@@ -160,6 +163,9 @@ class ZksyncEnv(NetworkEnv):
 
         return traced_computation
 
+    def deploy(self, *args, **kwargs):
+        raise NotImplementedError("Please use `deploy_code` instead")
+
     def deploy_code(
         self,
         sender=None,
@@ -170,6 +176,7 @@ class ZksyncEnv(NetworkEnv):
         dependency_bytecodes: Iterable[bytes] = (),
         salt=DEFAULT_SALT,
         max_priority_fee_per_gas=None,
+        contract=None,
         **kwargs,
     ) -> tuple[Address, bytes]:
         """
@@ -182,6 +189,7 @@ class ZksyncEnv(NetworkEnv):
         :param dependency_bytecodes: The bytecodes of the blueprints.
         :param salt: The salt for the contract deployment.
         :param max_priority_fee_per_gas: The max priority fee per gas for the transaction.
+        :param contract: The ZksyncContract that is being deployed.
         :param kwargs: Additional parameters for the transaction.
         :return: The address of the deployed contract and the bytecode hash.
         """
@@ -229,13 +237,27 @@ class ZksyncEnv(NetworkEnv):
         signature = tx.sign_typed_data(self._accounts[sender], estimated_gas)
         raw_tx = tx.rlp_encode(signature, estimated_gas)
 
+        broadcast_ts = time.time()
+
+        # Why do we do this over using _send_txn?
         tx_hash = self._rpc.fetch("eth_sendRawTransaction", ["0x" + raw_tx.hex()])
         print(f"tx broadcasted: {tx_hash}")
         receipt = self._rpc.wait_for_tx_receipt(tx_hash, self.tx_settings.poll_timeout)
         self.last_receipt = receipt
 
         print(f"{tx_hash} mined in block {receipt['blockHash']}!")
-        return Address(receipt["contractAddress"]), bytecode
+
+        create_address = Address(receipt["contractAddress"])
+
+        print(f"Contract deployed at {create_address}")
+
+        if (deployments_db := get_deployments_db()) is not None:
+            deployment_data = tx.to_deployment(
+                contract, receipt, broadcast_ts, create_address, self._rpc.name
+            )
+            deployments_db.insert_deployment(deployment_data)
+
+        return create_address, bytecode
 
     def get_code(self, address: Address) -> bytes:
         return self._rpc.fetch("eth_getCode", [address, "latest"])
@@ -267,6 +289,11 @@ class ZksyncEnv(NetworkEnv):
 
     def set_balance(self, addr: Address, value: int):
         self._rpc.fetch("hardhat_setBalance", [addr, to_hex(value)])
+
+    # Override
+    @classmethod
+    def from_url(cls, url: str, nickname=None) -> "NetworkEnv":
+        return cls(EthereumRPC(url), nickname=nickname)
 
 
 def _hash_code(bytecode: bytes) -> bytes:

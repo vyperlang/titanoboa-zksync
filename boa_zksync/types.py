@@ -1,13 +1,16 @@
-from dataclasses import dataclass, field
+import warnings
+from dataclasses import asdict, dataclass, field
 from functools import cached_property
 from typing import TYPE_CHECKING, Optional
 
 import rlp
 from boa.contracts.call_trace import TraceFrame
 from boa.contracts.vyper.vyper_contract import VyperDeployer
+from boa.deployments import Deployment
 from boa.interpret import compiler_data
 from boa.rpc import fixup_dict, to_bytes, to_hex
 from boa.util.abi import Address
+from boa.verifiers import get_verification_bundle
 from eth.exceptions import Revert, VMError
 from eth_account import Account
 from eth_account.datastructures import SignedMessage
@@ -18,6 +21,8 @@ from vyper.compiler.settings import OptimizationLevel
 
 if TYPE_CHECKING:
     from boa_zksync import ZksyncEnv
+    from boa_zksync.contract import ZksyncContract
+
 
 ZERO_ADDRESS = "0x0000000000000000000000000000000000000000"
 CONTRACT_DEPLOYER_ADDRESS = "0x0000000000000000000000000000000000008006"
@@ -159,6 +164,64 @@ class DeployTransaction:
                 ),
                 paymaster_type.serialize(self.paymaster_params or []),
             ]
+        )
+
+    def to_dict(self) -> dict:
+        """
+        Convert the DeployTransaction instance to a dictionary.
+        """
+        # Use asdict to convert the dataclass to a dict
+        d = asdict(self)
+
+        # Convert bytes and list of bytes to hexadecimal strings
+        for key, value in d.items():
+            if isinstance(value, bytes):
+                d[key] = "0x" + value.hex()
+            elif isinstance(value, list) and all(
+                isinstance(item, bytes) for item in value
+            ):
+                d[key] = ["0x" + item.hex() for item in value]
+
+        # Handle the paymaster_params tuple specially
+        if d["paymaster_params"] is not None:
+            d["paymaster_params"] = {
+                "paymaster": "0x" + d["paymaster_params"][0].to_bytes(20, "big").hex(),
+                "paymaster_input": "0x" + d["paymaster_params"][1].hex(),
+            }
+
+        return d
+
+    def to_deployment(
+        self,
+        contract: "ZksyncContract",
+        receipt: dict,
+        broadcast_ts: float,
+        create_address: Address,
+        rpc: str,
+    ):
+        contract_name = getattr(contract, "contract_name", None)
+        try:
+            source_bundle = get_verification_bundle(contract)
+        except Exception as e:
+            # there was a problem constructing the verification bundle.
+            # assume the user cares more about continuing, than getting
+            # the bundle into the db
+            msg = "While saving deployment data, couldn't construct"
+            msg += f" verification bundle for {contract_name}! Full stack"
+            msg += f" trace:\n```\n{e}\n```\nContinuing.\n"
+            warnings.warn(msg, stacklevel=2)
+            source_bundle = None
+        return Deployment(
+            contract_address=create_address,
+            contract_name=contract_name,
+            rpc=rpc,
+            deployer=Address(self.sender),
+            tx_hash=receipt["transactionHash"],
+            broadcast_ts=broadcast_ts,
+            tx_dict=self.to_dict(),
+            receipt_dict=receipt,
+            source_code=source_bundle,
+            abi=getattr(contract, "abi", None),
         )
 
 

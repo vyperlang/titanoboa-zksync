@@ -1,6 +1,8 @@
 import textwrap
 from contextlib import contextmanager
+from typing import TYPE_CHECKING, Optional
 
+from boa import Env
 from boa.contracts.abi.abi_contract import ABIContract, ABIFunction
 from boa.contracts.vyper.vyper_contract import VyperContract
 from boa.rpc import to_bytes, to_int
@@ -18,15 +20,86 @@ from boa_zksync.compiler_utils import (
 )
 from boa_zksync.types import ZksyncCompilerData
 
+if TYPE_CHECKING:
+    from boa_zksync import ZksyncEnv
+
 
 class ZksyncContract(ABIContract):
     """
     A contract deployed to the Zksync network.
     """
 
-    def __init__(self, compiler_data: ZksyncCompilerData, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(
+        self,
+        compiler_data: ZksyncCompilerData,
+        name: str,
+        functions: list[ABIFunction],
+        *args,
+        value=0,
+        env: "ZksyncEnv" = None,
+        override_address: Address = None,
+        # whether to skip constructor
+        skip_initcode=False,
+        created_from: Address = None,
+        filename: str = None,
+        gas=None,
+    ):
         self.compiler_data = compiler_data
+        self.created_from = created_from
+
+        # we duplicate the following setters from the base contract, because the
+        # ABI contract currently reads the bytecode from the env on init.
+        # However, the zk contract is not yet deployed at this point.
+        # for the deployment, these values are needed, so we set them here.
+        self._abi = compiler_data.abi
+        self.env = Env.get_singleton() if env is None else env
+        self.filename = filename
+        self.contract_name = name
+
+        # run the constructor if not skipping
+        if skip_initcode:
+            if value:
+                raise Exception("nonzero value but initcode is being skipped")
+            address = Address(override_address)
+        else:
+            address = self._run_init(
+                *args, value=value, override_address=override_address, gas=gas
+            )
+
+        # only now initialize the ABI contract
+        super().__init__(
+            name=name,
+            abi=compiler_data.abi,
+            functions=functions,
+            address=address,
+            filename=filename,
+            env=env,
+        )
+        self.env.register_contract(address, self)
+
+    def _run_init(self, *args, value=0, override_address=None, gas=None):
+        constructor_calldata = self._ctor.prepare_calldata(*args) if self._ctor else b""
+        address, bytecode = self.env.deploy_code(
+            override_address=override_address,
+            gas=gas,
+            contract=self,
+            bytecode=self.compiler_data.bytecode,
+            value=value,
+            constructor_calldata=constructor_calldata,
+        )
+        self.bytecode = bytecode
+        return address
+
+    @cached_property
+    def _ctor(self) -> Optional[ABIFunction]:
+        """
+        Get the constructor function of the contract.
+        :raises: StopIteration if the constructor is not found.
+        """
+        ctor_abi = next((i for i in self.abi if i["type"] == "constructor"), None)
+        if ctor_abi is None:
+            return None
+        return ABIFunction(ctor_abi, contract_name=self.contract_name)
 
     def eval(self, code):
         return ZksyncEval(code, self)()
@@ -35,6 +108,16 @@ class ZksyncContract(ABIContract):
     def override_vyper_namespace(self):
         with self.vyper_contract.override_vyper_namespace():
             yield
+
+    @cached_property
+    def deployer(self):
+        from boa_zksync.deployer import ZksyncDeployer
+
+        return ZksyncDeployer(
+            self.compiler_data.vyper,
+            filename=self.filename,
+            zkvyper_data=self.compiler_data,
+        )
 
     @cached_property
     def vyper_contract(self):
@@ -90,6 +173,17 @@ class ZksyncContract(ABIContract):
             event = (index, address.canonical_address, topics, data)
             ret.append(c.decode_log(event))
         return ret
+
+
+class ZksyncBlueprint(ZksyncContract):
+    """
+    In zkSync, any contract can be used as a blueprint.
+    The only difference here is that we don't need to run the constructor.
+    """
+
+    @property
+    def _ctor(self) -> Optional[ABIFunction]:
+        return None
 
 
 class _ZksyncInternal(ABIFunction):

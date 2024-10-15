@@ -3,23 +3,25 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from boa import Env
-from boa.contracts.abi.abi_contract import ABIContractFactory, ABIFunction
+from boa.contracts.abi.abi_contract import ABIContractFactory
 from boa.util.abi import Address
 from vyper.compiler import CompilerData
+from vyper.compiler.output import build_solc_json
 
 from boa_zksync.compile import compile_zksync, compile_zksync_source
-from boa_zksync.contract import ZksyncContract
-from boa_zksync.types import ZksyncCompilerData, DEFAULT_SALT
+from boa_zksync.contract import ZksyncBlueprint, ZksyncContract
+from boa_zksync.types import ZksyncCompilerData
 
 if TYPE_CHECKING:
     from boa_zksync.environment import ZksyncEnv
 
 
 class ZksyncDeployer(ABIContractFactory):
-
-    def __init__(self, compiler_data: CompilerData, filename=None):
+    def __init__(self, compiler_data: CompilerData, filename=None, zkvyper_data=None):
         contract_name = Path(compiler_data.contract_path).stem
-        self.zkvyper_data = self._compile(compiler_data, contract_name, filename)
+        if zkvyper_data is None:
+            zkvyper_data = self._compile(compiler_data, contract_name, filename)
+        self.zkvyper_data = zkvyper_data
         super().__init__(
             contract_name, self.zkvyper_data.abi, compiler_data.contract_path
         )
@@ -41,63 +43,34 @@ class ZksyncDeployer(ABIContractFactory):
     def from_abi_dict(cls, abi, name="<anonymous contract>", filename=None):
         raise NotImplementedError("ZksyncDeployer does not support loading from ABI")
 
-    def deploy(
-        self,
-        *args,
-        value=0,
-        gas=None,
-        dependency_bytecodes=(),
-        salt=DEFAULT_SALT,
-        max_priority_fee_per_gas=None,
-        **kwargs,
-    ) -> ZksyncContract:
-        address, _ = self.env.deploy_code(
-            bytecode=self.zkvyper_data.bytecode,
-            value=value,
-            gas=gas,
-            dependency_bytecodes=dependency_bytecodes,
-            salt=salt,
-            max_priority_fee_per_gas=max_priority_fee_per_gas,
-            constructor_calldata=(
-                self.constructor.prepare_calldata(*args, **kwargs)
-                if args or kwargs
-                else b""
-            ),
+    def deploy(self, *args, **kwargs) -> ZksyncContract:
+        return ZksyncContract(
+            self.zkvyper_data,
+            self._name,
+            self.functions,
+            *args,
+            filename=self.filename,
+            **kwargs,
         )
-        return self.at(address)
 
     def at(self, address: Address | str) -> ZksyncContract:
         """
         Create an ABI contract object for a deployed contract at `address`.
         """
-        address = Address(address)
-        contract = ZksyncContract(
-            self.zkvyper_data,
-            self._name,
-            self.abi,
-            self.functions,
-            address=address,
-            filename=self.filename,
-            env=self.env,
-        )
-        self.env.register_contract(address, contract)
-        return contract
+        return self.deploy(override_address=Address(address), skip_initcode=True)
 
-    def deploy_as_blueprint(self, *args, **kwargs) -> ZksyncContract:
+    def deploy_as_blueprint(self, **kwargs) -> ZksyncContract:
         """
         In zkSync, any contract can be used as a blueprint.
-        Note that we do need constructor arguments for deploying a blueprint.
+        The only difference here is that we don't need to run the constructor.
         """
-        return self.deploy(*args, **kwargs)
-
-    @cached_property
-    def constructor(self) -> ABIFunction:
-        """
-        Get the constructor function of the contract.
-        :raises: StopIteration if the constructor is not found.
-        """
-        ctor_abi = next(i for i in self.abi if i["type"] == "constructor")
-        return ABIFunction(ctor_abi, contract_name=self._name)
+        return ZksyncBlueprint(
+            self.zkvyper_data,
+            self._name,
+            self.functions,
+            filename=self.filename,
+            **kwargs,
+        )
 
     @property
     def env(self) -> "ZksyncEnv":
@@ -112,3 +85,11 @@ class ZksyncDeployer(ABIContractFactory):
             env, ZksyncEnv
         ), "ZksyncDeployer can only be used in zkSync environments"
         return env
+
+    @cached_property
+    def solc_json(self):
+        """
+        A ZKsync compatible solc-json. Generates a solc "standard json" representation
+        of the Vyper contract.
+        """
+        return build_solc_json(self.zkvyper_data.vyper)
