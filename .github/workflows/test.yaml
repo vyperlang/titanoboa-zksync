@@ -28,7 +28,7 @@ jobs:
 
           echo "Installing zkvyper and era_test_node"
           # Install zkvyper and era_test_node from binary repositories
-          curl --location https://raw.githubusercontent.com/matter-labs/zkvyper-bin/v1.5.4/linux-amd64/zkvyper-linux-amd64-musl-v1.5.4 \
+          curl --location https://raw.githubusercontent.com/matter-labs/zkvyper-bin/v1.5.5/linux-amd64/zkvyper-linux-amd64-musl-v1.5.5 \
             --silent --output /usr/local/bin/zkvyper && \
             chmod +x /usr/local/bin/zkvyper && \
             zkvyper --version
