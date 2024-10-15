@@ -40,3 +40,5 @@ jobs:
             rm era_test_node.tar.gz
 
       - run: make coverage lint
+        env:
+          SEPOLIA_PKEY: ${{ secrets.SEPOLIA_PKEY }}
