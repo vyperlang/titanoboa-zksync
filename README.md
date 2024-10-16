@@ -40,7 +40,7 @@ Then, make sure this is available in your system PATH.
 Finally, install the package:
 
 ```bash
-pip install git+https://github.com/DanielSchiavini/titanoboa-zksync.git@main
+pip install titanoboa-zksync
 ```
 
 ## Usage
