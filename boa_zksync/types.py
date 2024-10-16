@@ -173,6 +173,7 @@ class DeployTransaction:
         """
         # Use asdict to convert the dataclass to a dict
         d = asdict(self)
+        d["chainId"] = d.pop("chain_id")  # for consistency with boa, see #24
 
         # Convert bytes and list of bytes to hexadecimal strings
         for key, value in d.items():
