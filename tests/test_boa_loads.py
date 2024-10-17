@@ -139,8 +139,8 @@ def get_name_of(addr: HasName) -> String[32]:
     )
     assert isinstance(call_trace, TraceFrame)
     assert str(call_trace).split("\n") == [
-        f'[E] [24523] CallerContract.get_name_of(addr = "{called_addr}") <0x>',
-        "    [E] [23592] Unknown contract 0x0000000000000000000000000000000000008002.0x4de2e468",
+        f'[E] [24505] CallerContract.get_name_of(addr = "{called_addr}") <0x>',
+        "    [E] [23574] Unknown contract 0x0000000000000000000000000000000000008002.0x4de2e468",
         "        [566] Unknown contract 0x000000000000000000000000000000000000800B.0x29f172ad",
         "        [1909] Unknown contract 0x000000000000000000000000000000000000800B.0x06bed036",
         "            [159] Unknown contract 0x0000000000000000000000000000000000008010.0x00000000",
@@ -148,9 +148,9 @@ def get_name_of(addr: HasName) -> String[32]:
         "        [2226] Unknown contract 0x0000000000000000000000000000000000008002.0x4de2e468",
         "        [427] Unknown contract 0x000000000000000000000000000000000000800B.0xa851ae78",
         "        [398] Unknown contract 0x0000000000000000000000000000000000008004.0xe516761e",
-        "        [E] [2566] Unknown contract 0x0000000000000000000000000000000000008009.0xb47fade1",
-        f'            [E] [1383] CallerContract.get_name_of(addr = "{called_addr}") <0x>',
-        "                [E] [403] CalledContract.name() <0x>",
+        "        [E] [2548] Unknown contract 0x0000000000000000000000000000000000008009.0xb47fade1",
+        f'            [E] [1365] CallerContract.get_name_of(addr = "{called_addr}") <0x>',
+        "                [E] [397] CalledContract.name() <0x>",
     ]
 
 
