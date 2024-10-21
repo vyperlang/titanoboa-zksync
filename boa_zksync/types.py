@@ -200,6 +200,7 @@ class DeployTransaction:
         broadcast_ts: float,
         create_address: Address,
         rpc: str,
+        nickname: str | None = None,
     ):
         contract_name = getattr(contract, "contract_name", None)
         try:
@@ -222,6 +223,7 @@ class DeployTransaction:
             broadcast_ts=broadcast_ts,
             tx_dict=self.to_dict(),
             receipt_dict=receipt,
+            nickname=nickname,
             source_code=source_bundle,
             abi=getattr(contract, "abi", None),
         )

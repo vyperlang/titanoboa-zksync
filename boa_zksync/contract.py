@@ -44,6 +44,7 @@ class ZksyncContract(ABIContract):
         created_from: Address = None,
         filename: str = None,
         gas=None,
+        nickname=None,
     ):
         self.compiler_data = compiler_data
         self.created_from = created_from
@@ -64,7 +65,11 @@ class ZksyncContract(ABIContract):
             address = Address(override_address)
         else:
             address = self._run_init(
-                *args, value=value, override_address=override_address, gas=gas
+                *args,
+                value=value,
+                override_address=override_address,
+                gas=gas,
+                nickname=nickname,
             )
 
         # only now initialize the ABI contract
@@ -78,7 +83,7 @@ class ZksyncContract(ABIContract):
         )
         self.env.register_contract(address, self)
 
-    def _run_init(self, *args, value=0, override_address=None, gas=None):
+    def _run_init(self, *args, value=0, override_address=None, gas=None, nickname=None):
         self.constructor_calldata = (
             self._ctor.prepare_calldata(*args) if self._ctor else b""
         )
@@ -89,6 +94,7 @@ class ZksyncContract(ABIContract):
             bytecode=self.compiler_data.bytecode,
             value=value,
             constructor_calldata=self.constructor_calldata,
+            nickname=nickname,
         )
         self.bytecode = bytecode
         return address

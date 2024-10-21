@@ -177,6 +177,7 @@ class ZksyncEnv(NetworkEnv):
         salt=DEFAULT_SALT,
         max_priority_fee_per_gas=None,
         contract=None,
+        nickname=None,
         **kwargs,
     ) -> tuple[Address, bytes]:
         """
@@ -253,7 +254,12 @@ class ZksyncEnv(NetworkEnv):
 
         if (deployments_db := get_deployments_db()) is not None:
             deployment_data = tx.to_deployment(
-                contract, receipt, broadcast_ts, create_address, self._rpc.name
+                contract,
+                receipt,
+                broadcast_ts,
+                create_address,
+                self._rpc.name,
+                nickname,
             )
             deployments_db.insert_deployment(deployment_data)
 
