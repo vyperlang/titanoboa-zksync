@@ -33,7 +33,7 @@ class ZksyncContract(ABIContract):
     def __init__(
         self,
         compiler_data: ZksyncCompilerData,
-        name: str,
+        contract_name: str,
         functions: list[ABIFunction],
         *args,
         value=0,
@@ -55,7 +55,7 @@ class ZksyncContract(ABIContract):
         self._abi = compiler_data.abi
         self.env = Env.get_singleton() if env is None else env
         self.filename = filename
-        self.contract_name = name
+        self.contract_name = contract_name
 
         # run the constructor if not skipping
         if skip_initcode:
@@ -69,7 +69,7 @@ class ZksyncContract(ABIContract):
 
         # only now initialize the ABI contract
         super().__init__(
-            name=name,
+            name=contract_name,
             abi=compiler_data.abi,
             functions=functions,
             address=address,

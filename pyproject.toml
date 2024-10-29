@@ -17,7 +17,7 @@ classifiers = [
 ]
 
 dependencies = [
-    "titanoboa==0.2.4",
+    "titanoboa @ git+https://github.com/vyperlang/titanoboa.git",
 ]
 
 [project.optional-dependencies]
