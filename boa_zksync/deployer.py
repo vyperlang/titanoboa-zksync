@@ -1,6 +1,6 @@
 from functools import cached_property
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 from boa import Env
 from boa.contracts.abi.abi_contract import ABIContractFactory
@@ -43,10 +43,12 @@ class ZksyncDeployer(ABIContractFactory):
     def from_abi_dict(cls, abi, name="<anonymous contract>", filename=None):
         raise NotImplementedError("ZksyncDeployer does not support loading from ABI")
 
-    def deploy(self, *args, **kwargs) -> ZksyncContract:
+    def deploy(
+        self, *args, contract_name: Optional[str] = None, **kwargs
+    ) -> ZksyncContract:
         return ZksyncContract(
             self.zkvyper_data,
-            self._name,
+            contract_name or self._name,
             self.functions,
             *args,
             filename=self.filename,
@@ -59,14 +61,16 @@ class ZksyncDeployer(ABIContractFactory):
         """
         return self.deploy(override_address=Address(address), skip_initcode=True)
 
-    def deploy_as_blueprint(self, **kwargs) -> ZksyncContract:
+    def deploy_as_blueprint(
+        self, contract_name: Optional[str] = None, **kwargs
+    ) -> ZksyncContract:
         """
         In zkSync, any contract can be used as a blueprint.
         The only difference here is that we don't need to run the constructor.
         """
         return ZksyncBlueprint(
             self.zkvyper_data,
-            self._name,
+            contract_name or self._name,
             self.functions,
             filename=self.filename,
             **kwargs,

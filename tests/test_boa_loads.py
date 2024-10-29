@@ -126,14 +126,14 @@ def get_name_of(addr: HasName) -> String[32]:
     assert stack_trace == StackTrace(
         [
             "  Test an error(<CalledContract interface at "
-            f"{called_addr}> (file CalledContract).name() -> ['string'])",
+            f"{called_addr}> (file <unknown>).name() -> ['string'])",
             "  Test an error(<CallerContract interface at "
             f"{caller_contract.address}> (file "
-            "CallerContract).get_name_of(address) -> ['string'])",
+            "<unknown>).get_name_of(address) -> ['string'])",
             "   <Unknown contract 0x0000000000000000000000000000000000008009>",
             "   <Unknown contract 0x0000000000000000000000000000000000008002>",
             "  Test an error(<CallerContract interface at "
-            f"{caller_contract.address}> (file CallerContract).get_name_of(address) -> "
+            f"{caller_contract.address}> (file <unknown>).get_name_of(address) -> "
             "['string'])",
         ]
     )
