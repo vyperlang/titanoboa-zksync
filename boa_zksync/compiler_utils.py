@@ -80,13 +80,7 @@ def get_compiler_output(output):
     # from the compiler. Assuming key names could change and also assuming that the
     # number of keys could change, this method breaks if any of that happens:
 
-    excluded_keys = {
-        "version",
-        "zk_version",
-        "__VYPER_MINIMAL_PROXY_CONTRACT",
-        "project_metadata",
-        "extra_data",
-    }
+    excluded_keys = {"version", "zk_version", "__VYPER_MINIMAL_PROXY_CONTRACT", "extra_data"}
     contract_keys = set(output.keys()) - excluded_keys
 
     if len(contract_keys) != 1:
