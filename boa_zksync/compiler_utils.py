@@ -85,6 +85,7 @@ def get_compiler_output(output):
         "zk_version",
         "__VYPER_MINIMAL_PROXY_CONTRACT",
         "project_metadata",
+        "extra_data",
     }
     contract_keys = set(output.keys()) - excluded_keys
 
