@@ -17,7 +17,7 @@ classifiers = [
 ]
 
 dependencies = [
-    "titanoboa>=0.2.5b1"
+    "titanoboa>=0.2.6",
 ]
 
 [project.optional-dependencies]
