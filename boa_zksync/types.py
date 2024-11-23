@@ -202,6 +202,8 @@ class DeployTransaction:
         rpc: str,
     ):
         contract_name = getattr(contract, "contract_name", None)
+        if (filename := getattr(contract, "filename", None)) is not None:
+            filename = str(filename) # can be Path sometimes
         try:
             source_bundle = get_verification_bundle(contract)
         except Exception as e:
@@ -216,6 +218,7 @@ class DeployTransaction:
         return Deployment(
             contract_address=create_address,
             contract_name=contract_name,
+            filename=filename,
             rpc=rpc,
             deployer=Address(self.sender),
             tx_hash=receipt["transactionHash"],
