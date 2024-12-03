@@ -1,3 +1,4 @@
+import copy
 import re
 import time
 from dataclasses import dataclass
@@ -50,12 +51,15 @@ class ZksyncExplorer:
         """
         url = f"{self.uri}/contract_verification"
 
+        solc_json = copy.deepcopy(solc_json)
+        solc_json["sources"] = {
+            (contract_name if name == "<unknown>" else name): asset
+            for name, asset in solc_json["sources"].items()
+        }
+
         body = {
             "contractAddress": address,
-            "sourceCode": {
-                contract_name if name == "<unknown>" else name: asset["content"]
-                for name, asset in solc_json["sources"].items()
-            },
+            "sourceCode": solc_json,
             "codeFormat": "vyper-multi-file",
             "contractName": contract_name,
             "compilerVyperVersion": self._extract_version(
