@@ -1,9 +1,9 @@
 import os
 import socket
+import warnings
 from datetime import datetime, timedelta
 from subprocess import Popen, TimeoutExpired
 from time import sleep
-import warnings
 
 import requests
 from requests.exceptions import ConnectionError
@@ -91,7 +91,8 @@ def install_era_test_node(
     manually, but in the Colab environment, we can automate this process.
     """
     warnings.warn(
-        "This feature is deprecated and will be removed in a future release. era_test_node has since been renamed to anvil-zksync.",
+        """This feature is deprecated and will be removed in a future release.
+    era_test_node has since been renamed to anvil-zksync.""",
         DeprecationWarning,
     )
 
