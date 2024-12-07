@@ -94,6 +94,7 @@ def install_era_test_node(
         """This feature is deprecated and will be removed in a future release.
     era_test_node has since been renamed to anvil-zksync.""",
         DeprecationWarning,
+        stacklevel=2,
     )
 
     response = requests.get(source)
