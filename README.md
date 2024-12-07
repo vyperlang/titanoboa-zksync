@@ -1,7 +1,6 @@
 # titanoboa-zksync
 A Zksync plugin for the Titanoboa Vyper interpreter
 
-
 ## Installation
 
 First install the following dependencies, depending on your system:
@@ -24,15 +23,15 @@ Then, make sure this is available in your system PATH.
 
 #### ZkSync Node
 
-If you want to test with forks or a local test node, you will need to install the ZkSync [era-test-node](https://github.com/matter-labs/era-test-node/releases).
+If you want to test with forks or a local test node, you will need to install the ZkSync [anvil-zksyncs](https://github.com/matter-labs/anvil-zksync/releases).
 
-1. Download `era-test-node` from latest [Release](https://github.com/matter-labs/era-test-node/releases/latest)
+1. Download and install `anvil-zksync` 
 
-2. Extract the binary and mark as executable:
-   ```bash
-   tar xz -f era_test_node.tar.gz -C /usr/local/bin/
-   chmod +x /usr/local/bin/era_test_node
-   ```
+```bash
+curl --proto '=https' -sSf https://raw.githubusercontent.com/matter-labs/anvil-zksync/main/scripts/install.sh > install.sh
+chmod +x install.sh
+sudo ./install.sh
+```
 
 Then, make sure this is available in your system PATH.
 

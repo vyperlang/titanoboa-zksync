@@ -5,7 +5,7 @@ from boa.integrations.jupyter.browser import BrowserRPC, BrowserSigner, colab_ev
 from boa.rpc import EthereumRPC
 
 from boa_zksync.environment import ZksyncEnv
-from boa_zksync.util import install_era_test_node, install_zkvyper_compiler
+from boa_zksync.util import install_anvil_zksync, install_zkvyper_compiler
 
 
 class ZksyncBrowserEnv(ZksyncEnv):
@@ -34,10 +34,10 @@ class ZksyncBrowserEnv(ZksyncEnv):
     def fork_rpc(
         self, rpc: EthereumRPC, reset_traces=True, block_identifier="safe", **kwargs
     ):
-        if colab_eval_js and not which("era_test_node"):
+        if colab_eval_js and not which("anvil-zksync"):
             logging.warning(
-                "Automatically installing era-test-node in the Colab environment."
+                "Automatically installing anvil-zksync in the Colab environment."
             )
-            install_era_test_node()
+            install_anvil_zksync()
 
         return super().fork_rpc(rpc, reset_traces, block_identifier, **kwargs)
