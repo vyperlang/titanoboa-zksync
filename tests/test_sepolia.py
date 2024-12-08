@@ -3,7 +3,7 @@ import pytest
 from boa.rpc import EthereumRPC
 
 import boa_zksync
-from boa_zksync import EraTestNode
+from boa_zksync import AnvilZKsync
 from boa_zksync.environment import ZERO_ADDRESS
 
 
@@ -37,7 +37,7 @@ def set_implementation(_implementation: address):
 
 
 def test_fork_rpc(zksync_sepolia_fork):
-    assert isinstance(boa.env._rpc, EraTestNode)
+    assert isinstance(boa.env._rpc, AnvilZKsync)
     assert isinstance(boa.env._rpc.inner_rpc, EthereumRPC)
 
 

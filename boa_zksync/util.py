@@ -1,5 +1,6 @@
 import os
 import socket
+import warnings
 from datetime import datetime, timedelta
 from subprocess import Popen, TimeoutExpired
 from time import sleep
@@ -57,6 +58,27 @@ def install_zkvyper_compiler(
     assert os.system("zkvyper --version") == 0  # check if it works
 
 
+def install_anvil_zksync(
+    source="https://github.com/matter-labs/anvil-zksync/releases/download/v0.1.0-alpha.35/era_test_node-v0.1.0-alpha.35-x86_64-unknown-linux-gnu.tar.gz",  # noqa: E501
+    destination="/usr/local/bin/anvil-zksync",
+):
+    """
+    Downloads the anvil-zksync binary from the given source URL and installs it to
+    the destination directory.
+
+    This is a very basic implementation - usually users want to install the binary
+    manually, but in the Colab environment, we can automate this process.
+    """
+    response = requests.get(source)
+    with open("era_test_node.tar.gz", "wb") as f:
+        f.write(response.content)
+
+    os.system("tar --extract --file=era_test_node.tar.gz")
+    os.system(f"mv era_test_node {destination}")
+    os.system(f"{destination} --version")
+    os.system("rm era_test_node.tar.gz")
+
+
 def install_era_test_node(
     source="https://github.com/matter-labs/era-test-node/releases/download/v0.1.0-alpha.32/era_test_node-v0.1.0-alpha.32-x86_64-unknown-linux-gnu.tar.gz",  # noqa: E501
     destination="/usr/local/bin/era_test_node",
@@ -68,6 +90,13 @@ def install_era_test_node(
     This is a very basic implementation - usually users want to install the binary
     manually, but in the Colab environment, we can automate this process.
     """
+    warnings.warn(
+        """This feature is deprecated and will be removed in a future release.
+    era_test_node has since been renamed to anvil-zksync.""",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+
     response = requests.get(source)
     with open("era_test_node.tar.gz", "wb") as f:
         f.write(response.content)

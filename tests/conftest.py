@@ -6,7 +6,7 @@ from boa.deployments import DeploymentsDB, set_deployments_db
 from eth_account import Account
 
 import boa_zksync
-from boa_zksync import EraTestNode
+from boa_zksync import AnvilZKsync
 from boa_zksync.deployer import ZksyncDeployer
 
 STARTING_SUPPLY = 100
@@ -58,7 +58,7 @@ def zksync_sepolia_env():
 @pytest.fixture(scope="module")
 def account():
     # default rich account from era_test_node
-    _public_key, private_key = EraTestNode.TEST_ACCOUNTS[0]
+    _public_key, private_key = AnvilZKsync.TEST_ACCOUNTS[0]
     return Account.from_key(private_key)
 
 

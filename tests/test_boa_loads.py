@@ -131,7 +131,7 @@ def get_name_of(addr: HasName) -> String[32]:
             f"{caller_contract.address}> (file "
             "<unknown>).get_name_of(address) -> ['string'])",
             "   <Unknown contract 0x0000000000000000000000000000000000008009>",
-            "   <Unknown contract 0x0000000000000000000000000000000000008002>",
+            "   <Unknown contract 0x000000000000000000000000000000000000800b>",
             "  Test an error(<CallerContract interface at "
             f"{caller_contract.address}> (file <unknown>).get_name_of(address) -> "
             "['string'])",
@@ -139,16 +139,15 @@ def get_name_of(addr: HasName) -> String[32]:
     )
     assert isinstance(call_trace, TraceFrame)
     assert str(call_trace).split("\n") == [
-        f'[E] [24505] CallerContract.get_name_of(addr = "{called_addr}") <0x>',
-        "    [E] [23574] Unknown contract 0x0000000000000000000000000000000000008002.0x4de2e468",
-        "        [566] Unknown contract 0x000000000000000000000000000000000000800B.0x29f172ad",
+        f'[E] [21325] CallerContract.get_name_of(addr = "{called_addr}") <0x>',
+        "    [E] [19164] Unknown contract 0x000000000000000000000000000000000000800B.0x29f172ad",
         "        [1909] Unknown contract 0x000000000000000000000000000000000000800B.0x06bed036",
         "            [159] Unknown contract 0x0000000000000000000000000000000000008010.0x00000000",
-        "        [449] Unknown contract 0x000000000000000000000000000000000000800B.0xa225efcb",
+        "        [395] Unknown contract 0x000000000000000000000000000000000000800B.0xa225efcb",
         "        [2226] Unknown contract 0x0000000000000000000000000000000000008002.0x4de2e468",
-        "        [427] Unknown contract 0x000000000000000000000000000000000000800B.0xa851ae78",
+        "        [373] Unknown contract 0x000000000000000000000000000000000000800B.0xa851ae78",
         "        [398] Unknown contract 0x0000000000000000000000000000000000008004.0xe516761e",
-        "        [E] [2548] Unknown contract 0x0000000000000000000000000000000000008009.0xb47fade1",
+        "        [E] [2554] Unknown contract 0x0000000000000000000000000000000000008009.0xb47fade1",
         f'            [E] [1365] CallerContract.get_name_of(addr = "{called_addr}") <0x>',
         "                [E] [397] CalledContract.name() <0x>",
     ]
@@ -198,7 +197,7 @@ def transfer(_to : address, _value : uint256) -> bool:
     contract = boa.loads(code, 100)
     assert [str(e) for e in contract.get_logs()] == [
         "Transfer(sender=0x0000000000000000000000000000000000000000, "
-        "receiver=0xBC989fDe9e54cAd2aB4392Af6dF60f04873A033A, value=100)"
+        "receiver=0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266, value=100)"
     ]
 
     to = boa.env.generate_address()
