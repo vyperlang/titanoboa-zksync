@@ -17,7 +17,7 @@ from eth_account import Account
 from requests import HTTPError
 
 from boa_zksync.deployer import ZksyncDeployer
-from boa_zksync.node import EraTestNode
+from boa_zksync.node import AnvilZKsync
 from boa_zksync.types import (
     CONTRACT_DEPLOYER_ADDRESS,
     DEFAULT_SALT,
@@ -66,7 +66,7 @@ class ZksyncEnv(NetworkEnv):
         self._vm = None
         if (
             block_identifier == "latest"
-            and isinstance(self._rpc, EraTestNode)
+            and isinstance(self._rpc, AnvilZKsync)
             and (inner_rpc := self._rpc.inner_rpc)
         ):
             del self._rpc  # close the old rpc
@@ -93,7 +93,7 @@ class ZksyncEnv(NetworkEnv):
         if reset_traces:
             self.sha3_trace: dict = {}
             self.sstore_trace: dict = {}
-        self._rpc = EraTestNode(rpc, block_identifier, **kwargs)
+        self._rpc = AnvilZKsync(rpc, block_identifier, **kwargs)
 
     def register_contract(self, address, obj):
         addr = Address(address)

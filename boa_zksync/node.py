@@ -8,7 +8,7 @@ from boa.rpc import EthereumRPC
 from boa_zksync.util import find_free_port, stop_subprocess, wait_url
 
 
-class EraTestNode(EthereumRPC):
+class AnvilZKsync(EthereumRPC):
     # list of public+private keys for test accounts in the anvil-zksync
     TEST_ACCOUNTS = [
         (

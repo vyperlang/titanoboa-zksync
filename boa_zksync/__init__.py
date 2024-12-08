@@ -4,7 +4,7 @@ from boa.verifiers import VerificationResult
 
 from boa_zksync.contract import ZksyncContract
 from boa_zksync.environment import ZksyncEnv
-from boa_zksync.node import EraTestNode
+from boa_zksync.node import AnvilZKsync
 from boa_zksync.verifiers import ZksyncExplorer
 
 
@@ -15,7 +15,7 @@ def set_zksync_env(url, explorer_url=None, nickname=None):
 
 def set_zksync_test_env(node_args=(), nickname=None):
     return boa.set_env(
-        ZksyncEnv(rpc=EraTestNode(node_args=node_args), nickname=nickname)
+        ZksyncEnv(rpc=AnvilZKsync(node_args=node_args), nickname=nickname)
     )
 
 
