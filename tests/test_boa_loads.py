@@ -3,6 +3,7 @@ import pytest
 from boa import BoaError
 from boa.contracts.base_evm_contract import StackTrace
 from boa.contracts.call_trace import TraceFrame
+from packaging.version import Version, parse
 
 from tests.conftest import STARTING_SUPPLY
 
@@ -117,6 +118,10 @@ def get_name_of(addr: HasName) -> String[32]:
         name="CallerContract",
     )
 
+    # zkvyper version
+    zkvyper_version_curr: Version = parse(called_contract.compiler_data.zkvyper_version)
+    is_new_zkvyper: Version = zkvyper_version_curr >= parse("1.5.8")
+
     # boa.reverts does not give us the stack trace, use pytest.raises instead
     with pytest.raises(BoaError) as ctx:
         caller_contract.get_name_of(called_contract)
@@ -131,25 +136,30 @@ def get_name_of(addr: HasName) -> String[32]:
             f"{caller_contract.address}> (file "
             "<unknown>).get_name_of(address) -> ['string'])",
             "   <Unknown contract 0x0000000000000000000000000000000000008009>",
-            "   <Unknown contract 0x000000000000000000000000000000000000800b>",
             "  Test an error(<CallerContract interface at "
             f"{caller_contract.address}> (file <unknown>).get_name_of(address) -> "
             "['string'])",
         ]
     )
     assert isinstance(call_trace, TraceFrame)
+    # @dev working for >=1.5.7
+    first_index_error_id = 21151 if is_new_zkvyper else 21185
+    eighth_index_error_id = 2520 if is_new_zkvyper else 2554
+    ninth_index_error_id = 1347 if is_new_zkvyper else 1365
+    tenth_index_error_id = 397  # 397 is the same for both versions
+
     assert str(call_trace).split("\n") == [
-        f'[E] [21325] CallerContract.get_name_of(addr = "{called_addr}") <0x>',
-        "    [E] [19164] Unknown contract 0x000000000000000000000000000000000000800B.0x29f172ad",
-        "        [1909] Unknown contract 0x000000000000000000000000000000000000800B.0x06bed036",
-        "            [159] Unknown contract 0x0000000000000000000000000000000000008010.0x00000000",
-        "        [395] Unknown contract 0x000000000000000000000000000000000000800B.0xa225efcb",
-        "        [2226] Unknown contract 0x0000000000000000000000000000000000008002.0x4de2e468",
-        "        [373] Unknown contract 0x000000000000000000000000000000000000800B.0xa851ae78",
-        "        [398] Unknown contract 0x0000000000000000000000000000000000008004.0xe516761e",
-        "        [E] [2554] Unknown contract 0x0000000000000000000000000000000000008009.0xb47fade1",
-        f'            [E] [1365] CallerContract.get_name_of(addr = "{called_addr}") <0x>',
-        "                [E] [397] CalledContract.name() <0x>",
+        f'[E] [{first_index_error_id}] CallerContract.get_name_of(addr = "{called_addr}") <Test an error>',
+        "    [463] Unknown contract 0x000000000000000000000000000000000000800B.0x29f172ad",
+        "    [1921] Unknown contract 0x000000000000000000000000000000000000800B.0x06bed036",
+        "        [159] Unknown contract 0x0000000000000000000000000000000000008010.0x00000000",
+        "    [395] Unknown contract 0x000000000000000000000000000000000000800B.0xa225efcb",
+        "    [2226] Unknown contract 0x0000000000000000000000000000000000008002.0x4de2e468",
+        "    [373] Unknown contract 0x000000000000000000000000000000000000800B.0xa851ae78",
+        "    [398] Unknown contract 0x0000000000000000000000000000000000008004.0xe516761e",
+        f"    [E] [{eighth_index_error_id}] Unknown contract 0x0000000000000000000000000000000000008009.0xb47fade1",
+        f'        [E] [{ninth_index_error_id}] CallerContract.get_name_of(addr = "{called_addr}") <0x>',
+        f"            [E] [{tenth_index_error_id}] CalledContract.name() <0x>",
     ]
 
 

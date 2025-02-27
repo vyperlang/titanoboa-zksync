@@ -252,6 +252,11 @@ class ZksyncCompilerData:
     userdoc: Optional[dict] = None
     devdoc: Optional[dict] = None
 
+    # zkvyper>=1.5.8 fields
+    ir_json: Optional[dict] = None
+    ast: Optional[dict] = None
+    assembly: Optional[str] = None
+
     @cached_property
     def global_ctx(self):
         return self.vyper.global_ctx
