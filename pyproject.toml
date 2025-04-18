@@ -1,6 +1,6 @@
 [project]
 name = "titanoboa-zksync"
-version = "0.2.9"
+version = "0.2.10"
 description = "A Zksync plugin for the Titanoboa Vyper interpreter"
 license = { file = "LICENSE" }
 readme = "README.md"
@@ -17,7 +17,7 @@ classifiers = [
 ]
 
 dependencies = [
-    "titanoboa>=0.2.5",
+    "titanoboa>=0.2.6",
 ]
 
 [project.optional-dependencies]

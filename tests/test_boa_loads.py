@@ -139,16 +139,16 @@ def get_name_of(addr: HasName) -> String[32]:
     )
     assert isinstance(call_trace, TraceFrame)
     assert str(call_trace).split("\n") == [
-        f'[E] [21325] CallerContract.get_name_of(addr = "{called_addr}") <0x>',
-        "    [E] [19164] Unknown contract 0x000000000000000000000000000000000000800B.0x29f172ad",
+        f'[E] [21307] CallerContract.get_name_of(addr = "{called_addr}") <0x>',
+        "    [E] [19146] Unknown contract 0x000000000000000000000000000000000000800B.0x29f172ad",
         "        [1909] Unknown contract 0x000000000000000000000000000000000000800B.0x06bed036",
         "            [159] Unknown contract 0x0000000000000000000000000000000000008010.0x00000000",
         "        [395] Unknown contract 0x000000000000000000000000000000000000800B.0xa225efcb",
         "        [2226] Unknown contract 0x0000000000000000000000000000000000008002.0x4de2e468",
         "        [373] Unknown contract 0x000000000000000000000000000000000000800B.0xa851ae78",
         "        [398] Unknown contract 0x0000000000000000000000000000000000008004.0xe516761e",
-        "        [E] [2554] Unknown contract 0x0000000000000000000000000000000000008009.0xb47fade1",
-        f'            [E] [1365] CallerContract.get_name_of(addr = "{called_addr}") <0x>',
+        "        [E] [2536] Unknown contract 0x0000000000000000000000000000000000008009.0xb47fade1",
+        f'            [E] [1355] CallerContract.get_name_of(addr = "{called_addr}") <0x>',
         "                [E] [397] CalledContract.name() <0x>",
     ]
 
@@ -187,23 +187,23 @@ event Transfer:
 
 @deploy
 def __init__(supply: uint256):
-    log Transfer(empty(address), msg.sender, supply)
+    log Transfer(sender=empty(address), receiver=msg.sender, value=supply)
 
 @external
 def transfer(_to : address, _value : uint256) -> bool:
-    log Transfer(msg.sender, _to, _value)
+    log Transfer(sender=msg.sender, receiver=_to, value=_value)
     return True
 """
     contract = boa.loads(code, 100)
-    assert [str(e) for e in contract.get_logs()] == [
-        "Transfer(sender=0x0000000000000000000000000000000000000000, "
-        "receiver=0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266, value=100)"
-    ]
+    assert (
+        str(contract.get_logs())
+        == "[Transfer(address=Address('0x588758d8a0Ad1162A6294f3C274753137E664aE0'), sender=Address('0x0000000000000000000000000000000000000000'), receiver=Address('0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266'), value=100)]"
+    )
 
     to = boa.env.generate_address()
     contract.transfer(to, 10)
     assert [str(e) for e in contract.get_logs()] == [
-        f"Transfer(sender={boa.env.eoa}, receiver={to}, value=10)"
+        f"Transfer(address=Address('0x588758d8a0Ad1162A6294f3C274753137E664aE0'), sender=Address('{boa.env.eoa}'), receiver=Address('{to}'), value=10)"
     ]
 
 

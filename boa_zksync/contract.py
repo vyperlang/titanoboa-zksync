@@ -7,6 +7,7 @@ from boa.contracts.abi.abi_contract import ABIContract, ABIFunction
 from boa.contracts.vyper.vyper_contract import VyperContract
 from boa.rpc import to_bytes, to_int
 from boa.util.abi import Address
+from boa.contracts.event_decoder import RawLogEntry
 from cached_property import cached_property
 from vyper.semantics.analysis.base import VarInfo
 from vyper.semantics.types import HashMapT
@@ -71,6 +72,7 @@ class ZksyncContract(ABIContract):
         super().__init__(
             name=contract_name,
             abi=compiler_data.abi,
+            events=[item for item in compiler_data.abi if item.get("type") == "event"],
             functions=functions,
             address=address,
             filename=filename,
@@ -173,7 +175,7 @@ class ZksyncContract(ABIContract):
             index = to_int(log["logIndex"])
             topics = [to_int(topic) for topic in log["topics"]]
             data = to_bytes(log["data"])
-            event = (index, address.canonical_address, topics, data)
+            event = RawLogEntry(index, address.canonical_address, topics, data)
             ret.append(c.decode_log(event))
         return ret
 
