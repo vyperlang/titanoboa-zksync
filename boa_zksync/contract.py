@@ -4,10 +4,10 @@ from typing import TYPE_CHECKING, Optional
 
 from boa import Env
 from boa.contracts.abi.abi_contract import ABIContract, ABIFunction
+from boa.contracts.event_decoder import RawLogEntry
 from boa.contracts.vyper.vyper_contract import VyperContract
 from boa.rpc import to_bytes, to_int
 from boa.util.abi import Address
-from boa.contracts.event_decoder import RawLogEntry
 from cached_property import cached_property
 from vyper.semantics.analysis.base import VarInfo
 from vyper.semantics.types import HashMapT
