@@ -28,7 +28,7 @@ jobs:
 
           echo "Installing zkvyper and anvil-zksync"
           # Install zkvyper and anvil-zksync from binary repositories
-          curl --location https://raw.githubusercontent.com/matter-labs/zkvyper-bin/v1.5.7/linux-amd64/zkvyper-linux-amd64-musl-v1.5.7 \
+          curl --location https://raw.githubusercontent.com/matter-labs/zkvyper-bin/v1.5.10/linux-amd64/zkvyper-linux-amd64-musl-v1.5.10 \
             --silent --output /usr/local/bin/zkvyper && \
             chmod +x /usr/local/bin/zkvyper && \
             zkvyper --version
