@@ -104,7 +104,7 @@ class AnvilZKsync(EthereumRPC):
             else []
         )
         command_base = (
-            ["fork", "--fork-url", self.inner_rpc] + fork_at_args
+            ["fork", "--fork-url", self.inner_rpc._rpc_url] + fork_at_args
             if self.inner_rpc
             else ["run"]
         )

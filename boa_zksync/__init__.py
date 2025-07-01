@@ -1,5 +1,5 @@
 import atexit
-from typing import Optional
+
 
 import boa
 from boa import get_verifier
@@ -10,26 +10,73 @@ from boa_zksync.environment import ZksyncEnv
 from boa_zksync.node import AnvilZKsync
 from boa_zksync.verifiers import ZksyncExplorer
 
-# Module-level variable to track the currently active AnvilZKsync node
-_current_anvil_zksync_node: Optional[AnvilZKsync] = None
+from weakref import WeakSet
+
+# Using a WeakSet means instances are automatically removed when they are no longer
+# referenced elsewhere and garbage collected.
+_all_anvil_zksync_instances: WeakSet[AnvilZKsync] = WeakSet()
+
+# Temporary tracker for the currently active AnvilZKsync node.
+_original_anvil_zksync_new = AnvilZKsync.__new__
 
 
-@atexit.register
-def _stop_active_anvil_zksync_node():
-    """Helper function to stop the currently tracked AnvilZKsync node.
-
-    This function is registered to run at exit, ensuring that any active
-    AnvilZKsync node is stopped cleanly when the program exits.
+def _new_anvil_zksync_instance(cls, *args, **kwargs):
+    """
+    Interceptor for AnvilZKsync.__new__ to track all created instances.
     """
     import logging
 
-    global _current_anvil_zksync_node
-    if _current_anvil_zksync_node is not None:
-        logging.info("Stopping active AnvilZKsync node via boa_zksync global cleanup.")
-        _current_anvil_zksync_node.stop()
-        _current_anvil_zksync_node = None
+    # Call the original __new__ to create the instance
+    instance = _original_anvil_zksync_new(cls)
+    # Add to our global tracking set
+    _all_anvil_zksync_instances.add(instance)
+    logging.debug(
+        f"AnvilZKsync instance created and added to global tracker: {instance}"
+    )
+    return instance
+
+
+# Replace AnvilZKsync's __new__ method with our interceptor
+AnvilZKsync.__new__ = _new_anvil_zksync_instance
+
+
+@atexit.register
+def _stop_all_active_anvil_zksync_nodes_on_exit():
+    """
+    Atexit handler to stop any AnvilZKsync nodes still running when the program exits.
+    This uses the global tracking set and checks for live processes.
+    """
+    import logging
+
+    if not _all_anvil_zksync_instances:
+        logging.debug("No AnvilZKsync instances were tracked during program execution.")
+        return
+
+    logging.info(
+        "Running atexit cleanup: Checking for remaining active AnvilZKsync nodes."
+    )
+    nodes_to_stop = []
+    # Iterate over a list copy to safely modify the WeakSet if items are removed by GC
+    for node in list(_all_anvil_zksync_instances):
+        # node._test_node is the Popen object. poll() returns None if still running.
+        if node._test_node and node._test_node.poll() is None:
+            nodes_to_stop.append(node)
+        else:
+            # If the process is already dead, the WeakSet will eventually remove it,
+            # but we can explicitly log that it's no longer active.
+            logging.debug(f"AnvilZKsync node {node} already terminated or not started.")
+
+    if nodes_to_stop:
+        logging.info(f"Stopping {len(nodes_to_stop)} remaining AnvilZKsync node(s).")
+        for node in nodes_to_stop:
+            try:
+                # Call the original stop method
+                node.stop()
+                logging.info(f"Successfully stopped AnvilZKsync node: {node}")
+            except Exception as e:
+                logging.error(f"Error stopping AnvilZKsync node {node}: {e}")
     else:
-        logging.debug("No active AnvilZKsync node to stop.")
+        logging.info("No active AnvilZKsync nodes found needing cleanup at exit.")
 
 
 def set_zksync_env(url, explorer_url=None, nickname=None):
@@ -37,65 +84,33 @@ def set_zksync_env(url, explorer_url=None, nickname=None):
     boa.set_verifier(ZksyncExplorer(explorer_url))
     env = ZksyncEnv.from_url(url, nickname=nickname)
     boa.set_env(env)
-
-    # Ensure any previously active AnvilZKsync is stopped
-    _stop_active_anvil_zksync_node()
     return env
 
 
 def set_zksync_test_env(node_args=(), nickname=None):
-    """
-    Sets the boa environment to a local Anvil ZKsync test network.
-    Manages the AnvilZKsync subprocess lifecycle.
-    """
-    global _current_anvil_zksync_node
-
-    # Stop any previously active AnvilZKsync node before starting a new one
-    _stop_active_anvil_zksync_node()
-
+    """Sets the boa environment to a local Anvil ZKsync test network."""
     anvil_rpc = AnvilZKsync(node_args=node_args)
     env = ZksyncEnv(rpc=anvil_rpc, nickname=nickname)
     boa.set_env(env)
-
-    # Start the new AnvilZKsync node and track it
+    # The AnvilZKsync instance created here will be automatically tracked.
     anvil_rpc.start()
-    _current_anvil_zksync_node = anvil_rpc
-
     return env
 
 
 def set_zksync_fork(url, nickname=None, *args, **kwargs):
     """
     Sets the boa environment to a forked zkSync network using a local AnvilZKsync node.
-    Manages the AnvilZKsync subprocess lifecycle.
     """
-    global _current_anvil_zksync_node
-
-    # Stop any previously active AnvilZKsync node before starting a new one
-    _stop_active_anvil_zksync_node()
-
     env = ZksyncEnv.from_url(url, nickname=nickname)
-    # The fork() method internally creates an AnvilZKsync instance and sets it as env._rpc
-    env.fork(*args, **kwargs)
+    # @dev The anvil_zksync_node.start() is handled within ZksyncEnv.fork_rpc
+    env.fork(url=url, *args, **kwargs)
     boa.set_env(env)
-
-    # Start the AnvilZKsync node created by fork() and track it
-    if isinstance(env._rpc, AnvilZKsync):
-        env._rpc.start()
-        _current_anvil_zksync_node = env._rpc
-    else:
-        # This case implies a non-AnvilZKsync RPC was used for forking,
-        # so ensure no AnvilZKsync is tracked.
-        _current_anvil_zksync_node = None
 
     return env
 
 
 def set_zksync_browser_env(*args, **kwargs):
     """Sets the boa environment to a zkSync browser environment."""
-    # Ensure any previously active AnvilZKsync is stopped
-    _stop_active_anvil_zksync_node()
-
     # import locally because jupyter is generally not installed
     from boa_zksync.browser import ZksyncBrowserEnv
 
