@@ -89,10 +89,16 @@ class ZksyncEnv(NetworkEnv):
         :param block_identifier: Block identifier to fork from
         :param kwargs: Additional arguments for the RPC
         """
+        if isinstance(self._rpc, AnvilZKsync):
+            self._rpc.stop()
+
         self._reset_fork(block_identifier)
         if reset_traces:
             self.sha3_trace: dict = {}
             self.sstore_trace: dict = {}
+        # Create the new AnvilZKsync instance.
+        # @dev start() will be called by this ZksyncEnv's __enter__ method later,
+        # or by an external manager if ZksyncEnv is not used as a context.
         self._rpc = AnvilZKsync(rpc, block_identifier, **kwargs)
 
     def register_contract(self, address, obj):

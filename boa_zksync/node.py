@@ -5,10 +5,23 @@ from typing import Optional
 
 from boa.rpc import EthereumRPC
 
-from boa_zksync.util import find_free_port, stop_subprocess, wait_url
+from boa_zksync.util import find_free_port, is_port_free, stop_subprocess, wait_url
 
 
 class AnvilZKsync(EthereumRPC):
+    """Anvil ZKsync test node.
+
+    This class starts an Anvil node with ZKsync support, allowing you to run tests
+    against a local ZKsync environment. It can be used to fork a specific block
+    from a ZKsync network or to run a fresh node.
+
+    It acts as an EthereumRPC client while managing its own subprocess.
+
+    :iparam inner_rpc: Optional EthereumRPC instance.
+    :iparam block_identifier: Block number or identifier to fork from.
+    :iparam node_args: Additional arguments to pass to the anvil-zksync command.
+    """
+
     # list of public+private keys for test accounts in the anvil-zksync
     TEST_ACCOUNTS = [
         (
@@ -53,31 +66,86 @@ class AnvilZKsync(EthereumRPC):
         ),
     ]
 
+    SUGGESTED_ANVIL_ZKSYNC_PORT = 8011
+
     def __init__(
         self,
         inner_rpc: Optional[EthereumRPC] = None,
         block_identifier="safe",
         node_args=(),
     ):
+        # Set up the inner RPC URL based on the provided inner_rpc.
         self.inner_rpc = inner_rpc
+        self.block_identifier = block_identifier
+        self.node_args = node_args
 
-        port = find_free_port()
-        fork_at = (
-            ["--fork-at", f"{block_identifier}"]
-            if isinstance(block_identifier, int)
+        self._port: Optional[int] = None
+        self._test_node: Optional[Popen] = None
+        self._rpc_url: Optional[str] = None
+
+        # Setup the port for the anvil-zksync node.
+        # If the suggested port is free, use it; otherwise, find a free port.
+        if is_port_free(self.SUGGESTED_ANVIL_ZKSYNC_PORT):
+            self._port = self.SUGGESTED_ANVIL_ZKSYNC_PORT
+        else:
+            # If suggested port is not free, or no port provided, find a truly free one.
+            self._port = find_free_port()
+            logging.info(
+                f"{self.SUGGESTED_ANVIL_ZKSYNC_PORT} is in use. Found free port: {self._port}"
+            )
+
+        super().__init__(f"http://localhost:{self._port}")
+
+    def _build_command(self):
+        """Build the command to run the anvil-zksync node."""
+        fork_at_args = (
+            ["--fork-at", f"{self.block_identifier}"]
+            if isinstance(self.block_identifier, int)
             else []
         )
-        command = (
-            ["fork", "--fork-url", inner_rpc._rpc_url] + fork_at
-            if inner_rpc
+        command_base = (
+            ["fork", "--fork-url", self.inner_rpc] + fork_at_args
+            if self.inner_rpc
             else ["run"]
         )
-        args = ["anvil-zksync"] + list(node_args) + ["--port", f"{port}"] + command
-        self._test_node = Popen(args, stdout=sys.stdout, stderr=sys.stderr)
 
-        super().__init__(f"http://localhost:{port}")
-        logging.info(f"Started fork node at {self._rpc_url}")
+        args = (
+            ["anvil-zksync"]
+            + list(self.node_args)
+            + ["--port", f"{self._port}"]
+            + command_base
+        )
+        return args
+
+    def start(self):
+        """Starts the anvil-zksync node."""
+        if self._test_node is not None:
+            logging.warning("Anvil-ZkSync node is already running. Skipping start.")
+            return
+
+        command = self._build_command()
+        logging.info(f"Starting Anvil-ZkSync node with command: {' '.join(command)}")
+        self._test_node = Popen(command, stdout=sys.stdout, stderr=sys.stderr)
+        self._rpc_url = f"http://localhost:{self._port}"
+
+        logging.info(f"Anvil-ZkSync node attempting to start at {self._rpc_url}")
         wait_url(self._rpc_url)
+        logging.info(f"Anvil-ZkSync node running at {self._rpc_url}")
+
+    def stop(self):
+        """Stops the anvil-zksync node."""
+        if self._test_node is not None:
+            logging.info("Stopping Anvil-ZkSync node.")
+            stop_subprocess(self._test_node)
+            self._test_node = None
+            self._rpc_url = None
+        else:
+            logging.info("Anvil-ZkSync node is not running.")
 
     def __del__(self):
-        stop_subprocess(self._test_node)
+        """Destructor to ensure the node is stopped when the instance is garbage collected."""
+        if self._test_node is not None:
+            logging.warning(
+                "AnvilZKsync instance garbage collected without explicit stop()."
+            )
+            self.stop()

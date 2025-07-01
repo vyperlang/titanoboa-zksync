@@ -12,34 +12,24 @@ keywords = [
     "vyper",
     "zksync",
 ]
-classifiers = [
-    "Topic :: Software Development",
-]
+classifiers = ["Topic :: Software Development"]
 
 dependencies = [
     "titanoboa>=0.2.6",
-]
+    "vyper<0.4.2",
+] #@TODO to update when zkvyper adapted
 
 [project.optional-dependencies]
-forking-recommended = [
-    "ujson",
-]
+forking-recommended = ["ujson"]
 
 [build-system]
-requires = [
-    "setuptools",
-    "wheel",
-]
+requires = ["setuptools", "wheel"]
 
 [tool.setuptools.packages.find]
-include = [
-    "boa_zksync*",
-]
+include = ["boa_zksync*"]
 
 [tool.setuptools.package-data]
-boa_zksync = [
-    '*.json',
-]
+boa_zksync = ['*.json']
 
 [tool.uv]
 dev-dependencies = [
