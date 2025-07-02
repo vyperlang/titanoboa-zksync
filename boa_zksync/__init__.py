@@ -12,18 +12,16 @@ def set_zksync_env(url, explorer_url=None, nickname=None):
     """Sets the boa environment to a zkSync network environment."""
     boa.set_verifier(ZksyncExplorer(explorer_url))
     env = ZksyncEnv.from_url(url, nickname=nickname)
-    boa.set_env(env)
-    return env
+    return boa.set_env(env)
 
 
 def set_zksync_test_env(node_args=(), nickname=None):
     """Sets the boa environment to a local Anvil ZKsync test network."""
     anvil_rpc = AnvilZKsync(node_args=node_args)
     env = ZksyncEnv(rpc=anvil_rpc, nickname=nickname)
-    boa.set_env(env)
     # The AnvilZKsync instance created here will be automatically tracked.
     anvil_rpc.start()
-    return env
+    return boa.set_env(env)
 
 
 def set_zksync_fork(url, nickname=None, *args, **kwargs):
@@ -33,9 +31,7 @@ def set_zksync_fork(url, nickname=None, *args, **kwargs):
     env = ZksyncEnv.from_url(url, nickname=nickname)
     # @dev The anvil_zksync_node.start() is handled within ZksyncEnv.fork_rpc
     env.fork(url=url, *args, **kwargs)
-    boa.set_env(env)
-
-    return env
+    return boa.set_env(env)
 
 
 def set_zksync_browser_env(*args, **kwargs):
@@ -44,8 +40,7 @@ def set_zksync_browser_env(*args, **kwargs):
     from boa_zksync.browser import ZksyncBrowserEnv
 
     env = ZksyncBrowserEnv(*args, **kwargs)
-    boa.set_env(env)
-    return env
+    return boa.set_env(env)
 
 
 boa.set_zksync_env = set_zksync_env
