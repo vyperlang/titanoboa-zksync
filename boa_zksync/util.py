@@ -1,3 +1,4 @@
+import errno
 import os
 import socket
 import warnings
@@ -17,6 +18,31 @@ def find_free_port():
     portnum = s.getsockname()[1]
     s.close()
     return portnum
+
+
+def is_port_free(port: int, host: str = "127.0.0.1") -> bool:
+    """
+    Checks if a specific port on a given host is free (available for binding).
+
+    :param port: The port number to check.
+    :param host: The host IP address (e.g., "127.0.0.1" for localhost).
+    :return: True if the port is free, False otherwise.
+    """
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    try:
+        s.bind((host, port))
+        return True
+    except OSError as e:
+        if e.errno == errno.EADDRINUSE:
+            # Port is already in use
+            return False
+        else:
+            # Re-raise unexpected errors
+            raise
+    finally:
+        # Close the socket
+        s.close()
 
 
 def wait_url(url: str):

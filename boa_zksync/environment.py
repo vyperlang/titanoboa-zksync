@@ -75,9 +75,19 @@ class ZksyncEnv(NetworkEnv):
     def fork(
         self, url: str = None, reset_traces=True, block_identifier="safe", **kwargs
     ):
+        """Fork the environment to a local chain.
+        :param url: The URL of the RPC to fork from.
+        :param reset_traces: Reset the traces.
+        :param block_identifier: Block identifier to fork from.
+        :param kwargs: Additional arguments for the RPC.
+        """
         if url:
-            return super().fork(url, reset_traces, block_identifier, **kwargs)
-        return self.fork_rpc(self._rpc, reset_traces, block_identifier, **kwargs)
+            # @dev deprecated in boa, use AnvilZKsync fork mode
+            # return super().fork(url, reset_traces, block_identifier, debug, **kwargs)
+            self.fork_rpc(EthereumRPC(url), reset_traces, block_identifier, **kwargs)
+        else:
+            # This branch for forking from a pre-existing local Anvil
+            self.fork_rpc(self._rpc, reset_traces, block_identifier, **kwargs)
 
     def fork_rpc(
         self, rpc: EthereumRPC, reset_traces=True, block_identifier="safe", **kwargs
@@ -89,11 +99,21 @@ class ZksyncEnv(NetworkEnv):
         :param block_identifier: Block identifier to fork from
         :param kwargs: Additional arguments for the RPC
         """
+        if isinstance(self._rpc, AnvilZKsync):
+            self._rpc.stop()
+
         self._reset_fork(block_identifier)
         if reset_traces:
             self.sha3_trace: dict = {}
             self.sstore_trace: dict = {}
-        self._rpc = AnvilZKsync(rpc, block_identifier, **kwargs)
+        # Create the new AnvilZKsync instance with the provided RPC and block identifier.
+        new_anvil_rpc = AnvilZKsync(
+            inner_rpc=rpc, block_identifier=block_identifier, **kwargs
+        )
+        self._rpc = new_anvil_rpc
+
+        # Ensure the new AnvilZKsync node is started
+        new_anvil_rpc.start()
 
     def register_contract(self, address, obj):
         addr = Address(address)
@@ -150,9 +170,9 @@ class ZksyncEnv(NetworkEnv):
                 tx_data, receipt, trace = self._send_txn(**args.as_tx_params())
                 self.last_receipt = receipt
                 if trace:
-                    assert (
-                        traced_computation.is_error == trace.is_error
-                    ), f"VMError mismatch: {traced_computation.error} != {trace.error}"
+                    assert traced_computation.is_error == trace.is_error, (
+                        f"VMError mismatch: {traced_computation.error} != {trace.error}"
+                    )
                     return ZksyncComputation.from_debug_trace(self, trace.raw_trace)
 
             except _EstimateGasFailed:

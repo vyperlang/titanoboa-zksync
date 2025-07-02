@@ -14,7 +14,7 @@ ZKSYNC_SEPOLIA_RPC_URL = os.getenv(
     "ZKSYNC_SEPOLIA_RPC_URL", "https://sepolia.era.zksync.dev"
 )
 ZKSYNC_SEPOLIA_EXPLORER_URL = os.getenv(
-    "ZKSYNC_SEPOLIA_EXPLORER_URL", "https://explorer.sepolia.era.zksync.dev"
+    "ZKSYNC_SEPOLIA_EXPLORER_URL", "https://sepolia.explorer.zksync.io"
 )
 
 
@@ -30,11 +30,9 @@ def zksync_env(account):
 @pytest.fixture(scope="module")
 def zksync_sepolia_fork(account):
     old_env = boa.env
-    boa_zksync.set_zksync_fork(
-        ZKSYNC_SEPOLIA_RPC_URL,
-        block_identifier=3000000,
-        node_args=("--show-calls", "all", "--show-outputs", "true"),
-    )
+    # @dev removed node_args deprecated anvil-zksync argument
+    # @dev let block_identifier be "safe" by default
+    boa_zksync.set_zksync_fork(ZKSYNC_SEPOLIA_RPC_URL)
     boa.env.add_account(account, force_eoa=True)
     yield boa.env
     boa.set_env(old_env)

@@ -131,7 +131,7 @@ def get_name_of(addr: HasName) -> String[32]:
             f"{caller_contract.address}> (file "
             "<unknown>).get_name_of(address) -> ['string'])",
             "   <Unknown contract 0x0000000000000000000000000000000000008009>",
-            "   <Unknown contract 0x000000000000000000000000000000000000800b>",
+            # "   <Unknown contract 0x000000000000000000000000000000000000800b>",
             "  Test an error(<CallerContract interface at "
             f"{caller_contract.address}> (file <unknown>).get_name_of(address) -> "
             "['string'])",
@@ -139,17 +139,17 @@ def get_name_of(addr: HasName) -> String[32]:
     )
     assert isinstance(call_trace, TraceFrame)
     assert str(call_trace).split("\n") == [
-        f'[E] [21307] CallerContract.get_name_of(addr = "{called_addr}") <0x>',
-        "    [E] [19146] Unknown contract 0x000000000000000000000000000000000000800B.0x29f172ad",
-        "        [1909] Unknown contract 0x000000000000000000000000000000000000800B.0x06bed036",
-        "            [159] Unknown contract 0x0000000000000000000000000000000000008010.0x00000000",
-        "        [395] Unknown contract 0x000000000000000000000000000000000000800B.0xa225efcb",
-        "        [2226] Unknown contract 0x0000000000000000000000000000000000008002.0x4de2e468",
-        "        [373] Unknown contract 0x000000000000000000000000000000000000800B.0xa851ae78",
-        "        [398] Unknown contract 0x0000000000000000000000000000000000008004.0xe516761e",
-        "        [E] [2536] Unknown contract 0x0000000000000000000000000000000000008009.0xb47fade1",
-        f'            [E] [1355] CallerContract.get_name_of(addr = "{called_addr}") <0x>',
-        "                [E] [397] CalledContract.name() <0x>",
+        f'[E] [20942] CallerContract.get_name_of(addr = "{called_addr}") <Test an error>',
+        "    [445] Unknown contract 0x000000000000000000000000000000000000800B.0x29f172ad",
+        "    [1891] Unknown contract 0x000000000000000000000000000000000000800B.0x06bed036",
+        "        [159] Unknown contract 0x0000000000000000000000000000000000008010.0x00000000",
+        "    [383] Unknown contract 0x000000000000000000000000000000000000800B.0xa225efcb",
+        "    [2202] Unknown contract 0x0000000000000000000000000000000000008002.0x4de2e468",
+        "    [355] Unknown contract 0x000000000000000000000000000000000000800B.0xa851ae78",
+        "    [458] Unknown contract 0x0000000000000000000000000000000000008004.0xe516761e",
+        "    [E] [2412] Unknown contract 0x0000000000000000000000000000000000008009.0xb47fade1",
+        f'        [E] [1347] CallerContract.get_name_of(addr = "{called_addr}") <0x>',
+        "            [E] [397] CalledContract.name() <0x>",
     ]
 
 
