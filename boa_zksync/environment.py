@@ -82,7 +82,7 @@ class ZksyncEnv(NetworkEnv):
         :param kwargs: Additional arguments for the RPC.
         """
         if url:
-            # @dev deprecated in boa, use boa.fork instead
+            # @dev deprecated in boa, use AnvilZKsync fork mode
             # return super().fork(url, reset_traces, block_identifier, debug, **kwargs)
             self.fork_rpc(EthereumRPC(url), reset_traces, block_identifier, **kwargs)
         else:
@@ -170,9 +170,9 @@ class ZksyncEnv(NetworkEnv):
                 tx_data, receipt, trace = self._send_txn(**args.as_tx_params())
                 self.last_receipt = receipt
                 if trace:
-                    assert (
-                        traced_computation.is_error == trace.is_error
-                    ), f"VMError mismatch: {traced_computation.error} != {trace.error}"
+                    assert traced_computation.is_error == trace.is_error, (
+                        f"VMError mismatch: {traced_computation.error} != {trace.error}"
+                    )
                     return ZksyncComputation.from_debug_trace(self, trace.raw_trace)
 
             except _EstimateGasFailed:
