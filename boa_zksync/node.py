@@ -107,25 +107,34 @@ class AnvilZKsync(EthereumRPC):
         super().__init__(f"http://localhost:{self._port}")
 
     def _build_command(self):
-        """Build the command to run the anvil-zksync node."""
-        fork_at_args = (
-            ["--fork-at", f"{self.block_identifier}"]
-            if isinstance(self.block_identifier, int)
-            else []
-        )
-        command_base = (
-            ["fork", "--fork-url", self.inner_rpc._rpc_url] + fork_at_args
-            if self.inner_rpc
-            else ["run"]
-        )
+        """Build the command to run the anvil-zksync node, including fork mode if specified."""
+        command = ["anvil-zksync"]
 
-        args = (
-            ["anvil-zksync"]
-            + list(self.node_args)
-            + ["--port", f"{self._port}"]
-            + command_base
-        )
-        return args
+        # Extra node_args provided during instantiation
+        command.extend(list(self.node_args))
+
+        # Add the port argument
+        command.extend(["--port", f"{self._port}"])
+
+        if self.inner_rpc:
+            # If an inner_rpc is provided, we are running in fork mode
+            command.append("fork")
+            command.extend(["--fork-url", self.inner_rpc._rpc_url])
+
+            if self.block_identifier is not None:
+                # --fork-block-number expects an integer
+                if isinstance(self.block_identifier, int):
+                    command.extend(["--fork-block-number", f"{self.block_identifier}"])
+                elif self.block_identifier != "safe":
+                    logging.warning(
+                        f"AnvilZKsync: block_identifier '{self.block_identifier}' is not an integer or 'safe'. "
+                        "Skipping --fork-block-number. Anvil will fork from latest if not specified."
+                    )
+        else:
+            # No inner_rpc provided, run a fresh, non-forked node
+            command.append("run")
+
+        return command
 
     def start(self):
         """Starts the anvil-zksync node."""

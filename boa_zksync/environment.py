@@ -89,7 +89,12 @@ class ZksyncEnv(NetworkEnv):
         if url:
             # @dev deprecated in boa, use boa.fork instead
             # return super().fork(url, reset_traces, block_identifier, debug, **kwargs)
-            boa_fork(url, reset_traces, block_identifier, **kwargs)
+            self.fork_rpc(
+                EthereumRPC(url),
+                reset_traces,
+                block_identifier,
+                **kwargs,
+            )
         else:
             # This branch for forking from a pre-existing local Anvil
             self.fork_rpc(self._rpc, reset_traces, block_identifier, **kwargs)
