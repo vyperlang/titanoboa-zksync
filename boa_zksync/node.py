@@ -1,4 +1,5 @@
 import logging
+import os
 import sys
 from subprocess import Popen
 from typing import Optional
@@ -84,16 +85,25 @@ class AnvilZKsync(EthereumRPC):
         self._rpc_url: Optional[str] = None
 
         # Setup the port for the anvil-zksync node.
-        # If the suggested port is free, use it; otherwise, find a free port.
-        if is_port_free(self.SUGGESTED_ANVIL_ZKSYNC_PORT):
-            self._port = self.SUGGESTED_ANVIL_ZKSYNC_PORT
-        else:
-            # If suggested port is not free, or no port provided, find a truly free one.
+        if os.environ.get("PYTEST_XDIST_WORKER") is not None:
+            # When running with pytest-xdist, we need unique port for each worker.
             self._port = find_free_port()
             logging.info(
-                f"{self.SUGGESTED_ANVIL_ZKSYNC_PORT} is in use. Found free port: {self._port}"
+                f"pytest-xdist detected. AnvilZKsync instance assigned dynamic port: {self._port}"
             )
+        else:
+            # When not using pytest-xdist, use a suggested port or the one provided.
+            if is_port_free(self.SUGGESTED_ANVIL_ZKSYNC_PORT):
+                self._port = self.SUGGESTED_ANVIL_ZKSYNC_PORT
+                logging.info(f"Using provided port: {self._port}")
+            else:
+                # If the provided port is in use, find a free port.
+                self._port = find_free_port()
+                logging.warning(
+                    f"Provided port {self.SUGGESTED_ANVIL_ZKSYNC_PORT} is in use. Found free port: {self._port}"
+                )
 
+        # Initialize the parent class with the RPC URL.
         super().__init__(f"http://localhost:{self._port}")
 
     def _build_command(self):
