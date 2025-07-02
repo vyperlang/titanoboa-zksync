@@ -32,9 +32,7 @@ def zksync_sepolia_fork(account):
     old_env = boa.env
     # @dev removed node_args deprecated anvil-zksync argument
     # @dev let block_identifier be "safe" by default
-    boa_zksync.set_zksync_fork(
-        ZKSYNC_SEPOLIA_RPC_URL,
-    )
+    boa_zksync.set_zksync_fork(ZKSYNC_SEPOLIA_RPC_URL)
     boa.env.add_account(account, force_eoa=True)
     yield boa.env
     boa.set_env(old_env)

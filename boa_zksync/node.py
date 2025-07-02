@@ -1,12 +1,18 @@
+import atexit
 import logging
 import os
 import sys
 from subprocess import Popen
 from typing import Optional
+from weakref import WeakSet
 
 from boa.rpc import EthereumRPC
 
 from boa_zksync.util import find_free_port, is_port_free, stop_subprocess, wait_url
+
+# Using a WeakSet means instances are automatically removed when they are no longer
+# referenced elsewhere and garbage collected.
+_all_anvil_zksync_instances: WeakSet["AnvilZKsync"] = WeakSet()
 
 
 class AnvilZKsync(EthereumRPC):
@@ -100,11 +106,17 @@ class AnvilZKsync(EthereumRPC):
                 # If the provided port is in use, find a free port.
                 self._port = find_free_port()
                 logging.warning(
-                    f"Provided port {self.SUGGESTED_ANVIL_ZKSYNC_PORT} is in use. Found free port: {self._port}"
+                    f"{self.SUGGESTED_ANVIL_ZKSYNC_PORT} is in use. Found free port: {self._port}"
                 )
 
         # Initialize the parent class with the RPC URL.
         super().__init__(f"http://localhost:{self._port}")
+
+        # Add this instance to the global tracking set when it's created
+        _all_anvil_zksync_instances.add(self)
+        logging.debug(
+            f"AnvilZKsync instance created and added to global tracker: {self}"
+        )
 
     def _build_command(self):
         """Build the command to run the anvil-zksync node, including fork mode if specified."""
@@ -127,8 +139,8 @@ class AnvilZKsync(EthereumRPC):
                     command.extend(["--fork-block-number", f"{self.block_identifier}"])
                 elif self.block_identifier != "safe":
                     logging.warning(
-                        f"AnvilZKsync: block_identifier '{self.block_identifier}' is not an integer or 'safe'. "
-                        "Skipping --fork-block-number. Anvil will fork from latest if not specified."
+                        "AnvilZKsync: block_identifier is not an integer or 'safe'."
+                        "Skipping --fork-block-number."
                     )
         else:
             # No inner_rpc provided, run a fresh, non-forked node
@@ -168,3 +180,42 @@ class AnvilZKsync(EthereumRPC):
                 "AnvilZKsync instance garbage collected without explicit stop()."
             )
             self.stop()
+
+
+@atexit.register
+def _stop_all_active_anvil_zksync_nodes_on_exit():
+    """
+    Atexit handler to stop any AnvilZKsync nodes still running when the program exits.
+    This uses the global tracking set and checks for live processes.
+    """
+    import logging
+
+    if not _all_anvil_zksync_instances:
+        logging.debug("No AnvilZKsync instances were tracked during program execution.")
+        return
+
+    logging.info(
+        "Running atexit cleanup: Checking for remaining active AnvilZKsync nodes."
+    )
+    nodes_to_stop = []
+    # Iterate over a list copy to safely modify the WeakSet if items are removed by GC
+    for node in list(_all_anvil_zksync_instances):
+        # node._test_node is the Popen object. poll() returns None if still running.
+        if node._test_node and node._test_node.poll() is None:
+            nodes_to_stop.append(node)
+        else:
+            # If the process is already dead, the WeakSet will eventually remove it,
+            # but we can explicitly log that it's no longer active.
+            logging.debug(f"AnvilZKsync node {node} already terminated or not started.")
+
+    if nodes_to_stop:
+        logging.info(f"Stopping {len(nodes_to_stop)} remaining AnvilZKsync node(s).")
+        for node in nodes_to_stop:
+            try:
+                # Call the original stop method
+                node.stop()
+                logging.info(f"Successfully stopped AnvilZKsync node: {node}")
+            except Exception as e:
+                logging.error(f"Error stopping AnvilZKsync node {node}: {e}")
+    else:
+        logging.info("No active AnvilZKsync nodes found needing cleanup at exit.")

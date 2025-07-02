@@ -5,7 +5,6 @@ from hashlib import sha256
 from pathlib import Path
 from typing import Any, Iterable, Optional, Type
 
-from boa import fork as boa_fork
 from boa.contracts.abi.abi_contract import ABIContract, ABIContractFactory
 from boa.deployments import get_deployments_db
 from boa.environment import _AddressType
@@ -74,11 +73,7 @@ class ZksyncEnv(NetworkEnv):
             self._rpc = inner_rpc
 
     def fork(
-        self,
-        url: str = None,
-        reset_traces=True,
-        block_identifier="safe",
-        **kwargs,
+        self, url: str = None, reset_traces=True, block_identifier="safe", **kwargs
     ):
         """Fork the environment to a local chain.
         :param url: The URL of the RPC to fork from.
@@ -89,12 +84,7 @@ class ZksyncEnv(NetworkEnv):
         if url:
             # @dev deprecated in boa, use boa.fork instead
             # return super().fork(url, reset_traces, block_identifier, debug, **kwargs)
-            self.fork_rpc(
-                EthereumRPC(url),
-                reset_traces,
-                block_identifier,
-                **kwargs,
-            )
+            self.fork_rpc(EthereumRPC(url), reset_traces, block_identifier, **kwargs)
         else:
             # This branch for forking from a pre-existing local Anvil
             self.fork_rpc(self._rpc, reset_traces, block_identifier, **kwargs)
@@ -118,9 +108,7 @@ class ZksyncEnv(NetworkEnv):
             self.sstore_trace: dict = {}
         # Create the new AnvilZKsync instance with the provided RPC and block identifier.
         new_anvil_rpc = AnvilZKsync(
-            inner_rpc=rpc,
-            block_identifier=block_identifier,
-            **kwargs,
+            inner_rpc=rpc, block_identifier=block_identifier, **kwargs
         )
         self._rpc = new_anvil_rpc
 
@@ -182,9 +170,9 @@ class ZksyncEnv(NetworkEnv):
                 tx_data, receipt, trace = self._send_txn(**args.as_tx_params())
                 self.last_receipt = receipt
                 if trace:
-                    assert traced_computation.is_error == trace.is_error, (
-                        f"VMError mismatch: {traced_computation.error} != {trace.error}"
-                    )
+                    assert (
+                        traced_computation.is_error == trace.is_error
+                    ), f"VMError mismatch: {traced_computation.error} != {trace.error}"
                     return ZksyncComputation.from_debug_trace(self, trace.raw_trace)
 
             except _EstimateGasFailed:
